@@ -76,10 +76,11 @@ export class ConfigManager {
 
   static async getEffectiveConfig(folderPath: string = '.'): Promise<SensayConfig> {
     const envConfig = ConfigManager.getConfigFromEnv();
-    const { userConfig } = await ConfigManager.getMergedConfig(folderPath);
+    const { userConfig, projectConfig } = await ConfigManager.getMergedConfig(folderPath);
     
     return {
       ...userConfig,
+      ...projectConfig,
       ...envConfig,
     };
   }
