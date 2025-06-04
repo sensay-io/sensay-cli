@@ -1,0 +1,39 @@
+{
+  "name": "sensay-cli",
+  "version": "1.0.0",
+  "description": "CLI tool for Sensay API operations",
+  "main": "dist/index.js",
+  "bin": {
+    "sensay": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "start": "node dist/index.js",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": ["sensay", "cli", "api"],
+  "author": "Sensay",
+  "license": "UNLICENSED",
+  "private": true,
+  "devDependencies": {
+    "@types/inquirer": "^9.0.7",
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "chalk": "^4.1.2",
+    "commander": "^11.1.0",
+    "dotenv": "^16.3.0",
+    "fs-extra": "^11.2.0",
+    "inquirer": "^8.2.6",
+    "ora": "^5.4.1"
+  }
+}
