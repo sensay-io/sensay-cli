@@ -155,7 +155,11 @@ npm run lint            # ESLint checking
 npm run typecheck       # TypeScript type checking
 npm run clean           # Remove dist folder
 
-# Testing (manual)
+# Testing
+npm run test            # Run all tests
+npm run test:e2e        # Run E2E tests only
+
+# Manual testing
 node dist/index.js claim-key --help
 node dist/index.js simple-organization-setup --help
 ```
@@ -229,6 +233,33 @@ node dist/index.js simple-organization-setup --help
 
 ## Testing Strategy
 
+### Automated E2E Testing
+The project includes comprehensive end-to-end tests using Jest and nock for API mocking:
+
+**Test Coverage:**
+- Complete organization setup workflow with system message and training data
+- Handling existing users and replicas gracefully  
+- Missing system message and training data scenarios
+- Error handling (missing API key, API failures)
+- File processing and type filtering
+- Configuration management and persistence
+
+**Test Structure:**
+```
+tests/
+├── e2e/
+│   ├── organization-setup.test.ts    # Main E2E test suite
+│   └── test-fixtures/               # Test data documentation
+└── setup.ts                        # Jest configuration
+```
+
+**Running Tests:**
+```bash
+npm run test           # All tests
+npm run test:e2e       # E2E tests only
+npm run build && npm test  # Full validation
+```
+
 ### Manual Testing Workflow
 1. Test claim-key command with valid/invalid inputs
 2. Test simple-organization-setup with various folder structures
@@ -236,12 +267,6 @@ node dist/index.js simple-organization-setup --help
 4. Test interactive mode flows
 5. Verify error handling with invalid API keys
 6. Test file processing with different file types and sizes
-
-### Automated Testing (Future)
-- Unit tests for file processing utilities
-- Integration tests with mock API responses  
-- CLI integration tests with temporary folders
-- Configuration management tests
 
 ## Troubleshooting
 

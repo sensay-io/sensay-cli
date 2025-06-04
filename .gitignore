@@ -11,3 +11,5 @@ coverage/
 *.swp
 *.swo
 *~
+jest-coverage/
+.jest-cache/

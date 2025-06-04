@@ -181,6 +181,8 @@ npm run start       # Run compiled version
 npm run lint        # ESLint code checking
 npm run typecheck   # TypeScript type checking
 npm run clean       # Remove build artifacts
+npm run test        # Run all tests
+npm run test:e2e    # Run end-to-end tests only
 ```
 
 ### Project Structure
@@ -192,7 +194,33 @@ src/
 ├── types/          # TypeScript type definitions
 ├── utils/          # Utility functions
 └── index.ts        # Main CLI entry point
+
+tests/
+├── e2e/            # End-to-end tests
+└── setup.ts        # Test configuration
 ```
+
+### Testing
+The project includes comprehensive end-to-end tests that verify the complete workflow:
+
+```bash
+# Run all tests
+npm test
+
+# Run E2E tests only
+npm run test:e2e
+
+# Build and test everything
+npm run build && npm test
+```
+
+**Test Coverage:**
+- ✅ Complete organization setup with system message and training data
+- ✅ Handling existing users and replicas gracefully
+- ✅ Missing system message and training data scenarios
+- ✅ Error handling (missing API key, API failures)
+- ✅ File processing and type filtering
+- ✅ Configuration management and persistence
 
 ## 🎨 Features
 
