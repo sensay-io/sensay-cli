@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
-import { SensayApiClient } from '../api/client.js';
+import { SensayApiClient, SensayApiError } from '../generated/index.js';
 import { ConfigManager } from '../config/manager.js';
 
 const INTERNAL_CODE = 'GNEFSHAF';
@@ -75,10 +75,10 @@ export async function claimKeyCommand(options: ClaimKeyOptions): Promise<void> {
     });
 
     console.log(chalk.green('✅ API key claimed successfully!'));
-    console.log(chalk.cyan(`📋 Organization ID: ${response.organizationId}`));
+    console.log(chalk.cyan(`📋 Organization ID: ${response.organizationID}`));
     
-    if (response.expirationDate) {
-      const expirationDate = new Date(response.expirationDate);
+    if (response.validUntil) {
+      const expirationDate = new Date(response.validUntil);
       const now = new Date();
       
       if (expirationDate <= now) {
@@ -90,8 +90,8 @@ export async function claimKeyCommand(options: ClaimKeyOptions): Promise<void> {
     }
 
     const config = {
-      apiKey: response.organizationSecret,
-      organizationId: response.organizationId
+      apiKey: response.apiKey,
+      organizationId: response.organizationID
     };
 
     if (saveLocation === 'user') {
@@ -104,7 +104,36 @@ export async function claimKeyCommand(options: ClaimKeyOptions): Promise<void> {
 
   } catch (error: any) {
     console.error(chalk.red('❌ Failed to claim API key:'));
-    console.error(chalk.red(error.response?.data?.message || error.message));
+    
+    if (SensayApiClient.isSensayApiError(error)) {
+      // Properly typed Sensay API error
+      console.error(chalk.red(`Status: ${error.status}`));
+      console.error(chalk.red(`Error: ${error.response.error}`));
+      
+      if (error.requestId) {
+        console.error(chalk.gray(`Request ID: ${error.requestId}`));
+      }
+      
+      if (error.fingerprint) {
+        console.error(chalk.gray(`Fingerprint: ${error.fingerprint}`));
+      }
+      
+      if (error.status === 400) {
+        console.error(chalk.yellow('\n💡 Possible issues:'));
+        console.error(chalk.yellow('   • Invalid internal code (check if GNEFSHAF is correct)'));
+        console.error(chalk.yellow('   • Code may have expired or already been used'));
+        console.error(chalk.yellow('   • Organization name may already exist'));
+        console.error(chalk.yellow('   • Email format or validation issues'));
+      }
+    } else if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+      // Network error
+      console.error(chalk.red('Network error: Could not reach the API'));
+      console.error(chalk.red('Please check your internet connection'));
+    } else {
+      // Other error
+      console.error(chalk.red(`Error: ${error.message}`));
+    }
+    
     process.exit(1);
   }
 }

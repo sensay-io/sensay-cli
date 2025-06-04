@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import * as path from 'path';
-import { SensayApiClient } from '../api/client.js';
+import { SensayApiClient, SensayApiError } from '../generated/index.js';
 import { ConfigManager } from '../config/manager.js';
 import { FileProcessor } from '../utils/files.js';
 import { ProgressManager } from '../utils/progress.js';
@@ -34,7 +34,11 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
       process.exit(1);
     }
 
-    const client = new SensayApiClient(effectiveConfig);
+    const client = new SensayApiClient({
+      apiKey: effectiveConfig.apiKey,
+      organizationId: effectiveConfig.organizationId,
+      userId: effectiveConfig.userId
+    });
 
     // Get or prompt for configuration values
     let { organizationName, userName, userEmail, replicaName } = options;
@@ -106,11 +110,13 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
     const userSpinner = progress.createSpinner('user', 'Creating/getting user...');
     let user;
     try {
-      user = await client.getCurrentUser();
+      const userResponse = await client.getCurrentUser();
+      user = userResponse.user;
       userSpinner.succeed(`User found: ${user.name}`);
     } catch (error) {
       try {
-        user = await client.createUser({ name: userName!, email: userEmail });
+        const userResponse = await client.createUser({ name: userName!, email: userEmail });
+        user = userResponse.user;
         userSpinner.succeed(`User created: ${user.name}`);
       } catch (createError: any) {
         userSpinner.fail(`Failed to create user: ${createError.message}`);
@@ -121,16 +127,33 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
     // Update config with user ID
     await ConfigManager.saveProjectConfig({
       ...await ConfigManager.getProjectConfig(targetPath),
-      userId: user.id,
+      userId: user.uuid,
     }, targetPath);
+
+    // Step 3: Read system message early so we can use it in replica creation
+    const systemMessage = await FileProcessor.readSystemMessage(targetPath);
 
     // Step 2: Create or get replica
     const replicaSpinner = progress.createSpinner('replica', 'Creating/getting replica...');
-    const replicas = await client.getReplicas();
-    let replica = replicas.find(r => r.name === replicaName);
+    const replicasResponse = await client.getReplicas();
+    let replica = replicasResponse.items.find(r => r.name === replicaName);
 
     if (!replica) {
-      replica = await client.createReplica({ name: replicaName! });
+      const createResponse = await client.createReplica({ 
+        name: replicaName!,
+        shortDescription: `AI replica for ${replicaName}`,
+        greeting: 'Hello! How can I help you today?',
+        ownerID: user.uuid,
+        slug: replicaName!.toLowerCase().replace(/\s+/g, '-'),
+        llm: {
+          model: 'claude-3-5-haiku-latest',
+          memoryMode: 'rag-search',
+          systemMessage: systemMessage || 'You are a helpful AI assistant.',
+          tools: []
+        }
+      });
+      // Get the created replica details
+      replica = await client.getReplica(createResponse.uuid);
       replicaSpinner.succeed(`Replica created: ${replica.name}`);
     } else {
       replicaSpinner.succeed(`Replica found: ${replica.name}`);
@@ -139,15 +162,19 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
     // Update config with replica ID
     await ConfigManager.saveProjectConfig({
       ...await ConfigManager.getProjectConfig(targetPath),
-      replicaId: replica.id,
+      replicaId: replica.uuid,
     }, targetPath);
 
-    // Step 3: Update system message
-    const systemMessage = await FileProcessor.readSystemMessage(targetPath);
+    // Step 3: Update system message if needed and not already set during creation
     if (systemMessage) {
       const systemSpinner = progress.createSpinner('system', 'Updating system message...');
       try {
-        await client.updateReplicaSystemMessage(replica.id, systemMessage);
+        await client.updateReplica(replica.uuid, {
+          llm: {
+            ...replica.llm,
+            systemMessage: systemMessage
+          }
+        });
         systemSpinner.succeed('System message updated');
       } catch (error: any) {
         systemSpinner.fail(`Failed to update system message: ${error.message}`);
@@ -167,7 +194,7 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
       // Clear existing training data
       const clearSpinner = progress.createSpinner('clear', 'Clearing existing training data...');
       try {
-        await client.clearTrainingData(replica.id);
+        await client.clearTrainingData(replica.uuid);
         clearSpinner.succeed('Existing training data cleared');
       } catch (error: any) {
         clearSpinner.fail(`Failed to clear training data: ${error.message}`);
@@ -176,12 +203,12 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
       // Upload new training data
       const uploadSpinner = progress.createSpinner('upload', 'Uploading training data...');
       try {
-        const fileData = files.map(f => ({ name: f.relativePath, content: f.content }));
-        await client.uploadTrainingData(replica.id, fileData);
+        const fileData = files.map(f => ({ filename: f.relativePath, content: f.content }));
+        await client.uploadTrainingData(replica.uuid, fileData);
         uploadSpinner.succeed(`${files.length} training files uploaded`);
 
         // Poll training status
-        await progress.pollTrainingStatus(client, replica.id, files);
+        await progress.pollTrainingStatus(client, replica.uuid, files);
 
       } catch (error: any) {
         uploadSpinner.fail(`Failed to upload training data: ${error.message}`);
@@ -190,12 +217,33 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
 
     console.log(chalk.green('\n✅ Simple organization setup completed successfully!'));
     console.log(chalk.cyan(`📋 Organization: ${organizationName}`));
-    console.log(chalk.cyan(`👤 User: ${userName} (${user.id})`));
-    console.log(chalk.cyan(`🤖 Replica: ${replicaName} (${replica.id})`));
+    console.log(chalk.cyan(`👤 User: ${userName} (${user.uuid})`));
+    console.log(chalk.cyan(`🤖 Replica: ${replicaName} (${replica.uuid})`));
 
   } catch (error: any) {
     console.error(chalk.red('\n❌ Setup failed:'));
-    console.error(chalk.red(error.response?.data?.message || error.message));
+    
+    if (SensayApiClient.isSensayApiError(error)) {
+      // Properly typed Sensay API error
+      console.error(chalk.red(`Status: ${error.status}`));
+      console.error(chalk.red(`Error: ${error.response.error}`));
+      
+      if (error.requestId) {
+        console.error(chalk.gray(`Request ID: ${error.requestId}`));
+      }
+      
+      if (error.fingerprint) {
+        console.error(chalk.gray(`Fingerprint: ${error.fingerprint}`));
+      }
+    } else if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+      // Network error
+      console.error(chalk.red('Network error: Could not reach the API'));
+      console.error(chalk.red('Please check your internet connection'));
+    } else {
+      // Other error
+      console.error(chalk.red(`Error: ${error.message}`));
+    }
+    
     process.exit(1);
   }
 }
