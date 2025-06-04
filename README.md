@@ -207,6 +207,7 @@ npm run typecheck   # TypeScript type checking
 npm run clean       # Remove build artifacts
 npm run test        # Run all tests
 npm run test:e2e    # Run end-to-end tests only
+npm run generate-sdk # Download latest OpenAPI schema for SDK updates
 ```
 
 ### Project Structure
@@ -371,6 +372,27 @@ for project in bot1 bot2 bot3; do
   sensay simple-organization-setup ./$project -r "$project-replica"
 done
 ```
+
+## 🔄 SDK Maintenance
+
+### Updating the Generated SDK
+
+When the Sensay API schema changes, update the SDK:
+
+```bash
+# Download the latest OpenAPI schema
+npm run generate-sdk
+
+# Compare the new schema with existing types
+# Update src/generated/types.ts and src/generated/api-client.ts manually
+# Test the changes
+npm run build && npm test
+
+# Commit the updates
+git add src/generated/ && git commit -m "Update SDK for API schema changes"
+```
+
+**Note:** The SDK types and client are manually maintained to ensure proper error handling and type safety. The `generate-sdk` command only downloads the latest schema for comparison.
 
 ## 🤝 Contributing
 

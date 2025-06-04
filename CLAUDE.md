@@ -159,6 +159,9 @@ npm run clean           # Remove dist folder
 npm run test            # Run all tests
 npm run test:e2e        # Run E2E tests only
 
+# SDK Maintenance
+npm run generate-sdk    # Download latest OpenAPI schema
+
 # Manual testing
 node dist/index.js claim-key --help
 node dist/index.js simple-organization-setup --help
@@ -220,10 +223,12 @@ node dist/index.js simple-organization-setup --help
 5. Add to interactive menu if appropriate
 
 ### Adding New API Endpoints
-1. Add types to `src/types/api.ts`
-2. Add method to `SensayApiClient` class
-3. Follow existing authentication pattern
-4. Handle errors appropriately
+1. Download latest schema: `npm run generate-sdk`
+2. Compare new schema with existing types in `src/generated/`
+3. Update `src/generated/types.ts` with new interfaces
+4. Add methods to `src/generated/api-client.ts` following existing patterns
+5. Follow existing authentication and error handling patterns
+6. Test the new endpoints thoroughly
 
 ### Adding New Configuration Options
 1. Update interfaces in `src/types/api.ts`
