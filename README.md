@@ -31,6 +31,30 @@ node dist/index.js [command]
 npm run dev [command]
 ```
 
+### Uninstalling
+
+If you used `npm link` for global installation:
+
+```bash
+# Unlink the global command
+npm unlink -g
+
+# Or specifically unlink sensay-cli
+npm unlink -g sensay-cli
+
+# Remove from current project (if linked locally)
+npm unlink
+
+# Verify removal
+which sensay  # Should return nothing
+```
+
+If you installed globally via other methods:
+```bash
+# Remove global installation
+npm uninstall -g sensay-cli
+```
+
 ### Prerequisites
 - Node.js 18+ 
 - npm or yarn
