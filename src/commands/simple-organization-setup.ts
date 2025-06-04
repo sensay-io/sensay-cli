@@ -244,7 +244,11 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
       console.error(chalk.red(`Error: ${error.message}`));
     }
     
-    process.exit(1);
+    if (process.env.NODE_ENV !== 'test') {
+      process.exit(1);
+    } else {
+      throw error;
+    }
   }
 }
 

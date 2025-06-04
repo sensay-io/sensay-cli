@@ -47,9 +47,7 @@ export class SensayApiClient {
       (response: AxiosResponse) => response,
       (error: AxiosError) => {
         if (error.response && error.response.data) {
-          // Check if response data has the expected error structure
           const data = error.response.data as any;
-          // console.debug('API Error Response:', JSON.stringify(data, null, 2)); // Debug log
           if (data.success === false && data.error) {
             const errorData: SensayErrorResponse = {
               success: false,

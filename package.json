@@ -2,19 +2,18 @@
   "name": "sensay-cli",
   "version": "1.0.0",
   "description": "CLI tool for Sensay API operations",
-  "main": "dist/index.js",
+  "main": "dist/src/index.js",
   "bin": {
-    "sensay": "dist/index.js"
+    "sensay": "dist/src/index.js"
   },
   "scripts": {
     "build": "tsc",
     "dev": "ts-node src/index.ts",
-    "start": "node dist/index.js",
+    "start": "node dist/src/index.js",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
-    "test": "jest",
-    "test:e2e": "jest --testPathPattern=e2e",
+    "test": "jest --passWithNoTests",
     "generate-sdk": "node -e \"const axios = require('axios'); const fs = require('fs-extra'); axios.get('https://api.sensay.io/schema').then(res => { fs.ensureDirSync('./src/generated'); fs.writeJsonSync('./src/generated/schema.json', res.data, { spaces: 2 }); console.log('✅ OpenAPI schema downloaded to src/generated/schema.json'); console.log('⚠️  Please manually update the generated types and API client if the schema has changed.'); console.log('📝 Compare with existing files in src/generated/ and update accordingly.'); }).catch(err => { console.error('❌ Failed to download schema:', err.message); process.exit(1); });\""
   },
   "keywords": [

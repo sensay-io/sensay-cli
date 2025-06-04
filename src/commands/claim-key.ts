@@ -130,11 +130,28 @@ export async function claimKeyCommand(options: ClaimKeyOptions): Promise<void> {
       console.error(chalk.red('Network error: Could not reach the API'));
       console.error(chalk.red('Please check your internet connection'));
     } else {
-      // Other error
+      // Other error - show raw response if available
       console.error(chalk.red(`Error: ${error.message}`));
+      
+      if (error.response?.data) {
+        const data = error.response.data;
+        if (data.error) {
+          console.error(chalk.red(`API Error: ${data.error}`));
+        }
+        if (data.request_id) {
+          console.error(chalk.gray(`Request ID: ${data.request_id}`));
+        }
+        if (data.fingerprint) {
+          console.error(chalk.gray(`Fingerprint: ${data.fingerprint}`));
+        }
+      }
     }
     
-    process.exit(1);
+    if (process.env.NODE_ENV !== 'test') {
+      process.exit(1);
+    } else {
+      throw error;
+    }
   }
 }
 
