@@ -2,10 +2,10 @@ import { Command } from 'commander';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import * as path from 'path';
-import { SensayApiClient, SensayApiError } from '../generated/index.js';
-import { ConfigManager } from '../config/manager.js';
-import { FileProcessor } from '../utils/files.js';
-import { ProgressManager } from '../utils/progress.js';
+import { SensayApiClient, SensayApiError } from '../generated/index';
+import { ConfigManager } from '../config/manager';
+import { FileProcessor } from '../utils/files';
+import { ProgressManager } from '../utils/progress';
 
 interface SetupOptions {
   folderPath?: string;

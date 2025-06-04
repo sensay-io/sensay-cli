@@ -1,7 +1,7 @@
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import * as os from 'os';
-import { SensayConfig } from '../types/api.js';
+import { SensayConfig } from '../types/api';
 
 export interface ProjectConfig {
   organizationName?: string;

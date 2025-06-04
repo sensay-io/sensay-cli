@@ -12,4 +12,4 @@ coverage/
 *.swo
 *~
 jest-coverage/
-.jest-cache/
+.jest-cache/sensay.config.json

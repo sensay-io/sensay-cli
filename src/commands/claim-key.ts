@@ -1,8 +1,8 @@
 import { Command } from 'commander';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
-import { SensayApiClient, SensayApiError } from '../generated/index.js';
-import { ConfigManager } from '../config/manager.js';
+import { SensayApiClient, SensayApiError } from '../generated/index';
+import { ConfigManager } from '../config/manager';
 
 const INTERNAL_CODE = 'GNEFSHAF';
 

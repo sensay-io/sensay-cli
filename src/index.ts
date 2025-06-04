@@ -2,8 +2,8 @@
 
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { setupClaimKeyCommand } from './commands/claim-key.js';
-import { setupSimpleOrganizationSetupCommand } from './commands/simple-organization-setup.js';
+import { setupClaimKeyCommand } from './commands/claim-key';
+import { setupSimpleOrganizationSetupCommand } from './commands/simple-organization-setup';
 
 const program = new Command();
 
@@ -43,12 +43,12 @@ program
 
     switch (action) {
       case 'claim-key': {
-        const { claimKeyCommand } = await import('./commands/claim-key.js');
+        const { claimKeyCommand } = await import('./commands/claim-key');
         await claimKeyCommand({});
         break;
       }
       case 'setup': {
-        const { simpleOrganizationSetupCommand } = await import('./commands/simple-organization-setup.js');
+        const { simpleOrganizationSetupCommand } = await import('./commands/simple-organization-setup');
         await simpleOrganizationSetupCommand();
         break;
       }

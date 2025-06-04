@@ -10,7 +10,7 @@ import {
   CreateReplicaResponse,
   ReplicasListResponse,
   Replica
-} from './types.js';
+} from './types';
 
 export interface SensayApiConfig {
   baseURL?: string;
