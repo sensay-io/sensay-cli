@@ -26,7 +26,7 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
 
   try {
     // Load configurations
-    const { userConfig, projectConfig } = await ConfigManager.getMergedConfig(targetPath);
+    const { projectConfig } = await ConfigManager.getMergedConfig(targetPath);
     const effectiveConfig = await ConfigManager.getEffectiveConfig(targetPath);
 
     if (!effectiveConfig.apiKey) {

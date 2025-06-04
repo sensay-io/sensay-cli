@@ -14,11 +14,16 @@
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
-  "keywords": ["sensay", "cli", "api"],
+  "keywords": [
+    "sensay",
+    "cli",
+    "api"
+  ],
   "author": "Sensay",
   "license": "UNLICENSED",
   "private": true,
   "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
     "@types/inquirer": "^9.0.7",
     "@types/node": "^20.10.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",

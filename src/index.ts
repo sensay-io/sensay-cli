@@ -42,14 +42,16 @@ program
     });
 
     switch (action) {
-      case 'claim-key':
+      case 'claim-key': {
         const { claimKeyCommand } = await import('./commands/claim-key.js');
         await claimKeyCommand({});
         break;
-      case 'setup':
+      }
+      case 'setup': {
         const { simpleOrganizationSetupCommand } = await import('./commands/simple-organization-setup.js');
         await simpleOrganizationSetupCommand();
         break;
+      }
       case 'exit':
         console.log(chalk.blue('👋 Goodbye!'));
         break;
