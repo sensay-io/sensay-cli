@@ -260,6 +260,21 @@ sensay claim-key
 Please contact support to update the expiration date manually in the database.
 ```
 
+**API Error with Details**
+```
+❌ Failed to claim API key:
+Status: 400
+Error: Invalid invitation code
+Request ID: xyz1::reg1:reg1::ab3c4-1234567890123-0123456789ab
+Fingerprint: 14fceadd84e74ec499afe9b0f7952d6b
+
+💡 Possible issues:
+   • Invalid internal code (check if GNEFSHAF is correct)
+   • Code may have expired or already been used
+   • Organization name may already exist
+   • Email format or validation issues
+```
+
 **"No training data found"**
 - Check that `training-data/` folder exists
 - Verify files have supported extensions (.txt, .md, .json, .csv, .log)
