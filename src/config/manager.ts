@@ -11,6 +11,7 @@ export interface ProjectConfig {
   organizationId?: string;
   userId?: string;
   replicaId?: string;
+  apiKey?: string;
 }
 
 export class ConfigManager {

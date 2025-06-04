@@ -31,7 +31,11 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
 
     if (!effectiveConfig.apiKey) {
       console.error(chalk.red('❌ No API key found. Please run "sensay claim-key" first.'));
-      process.exit(1);
+      if (process.env.NODE_ENV !== 'test') {
+        process.exit(1);
+      } else {
+        throw new Error('No API key found');
+      }
     }
 
     const client = new SensayApiClient({
