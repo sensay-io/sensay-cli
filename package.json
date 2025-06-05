@@ -7,9 +7,7 @@
     "sensay": "dist/src/index.js"
   },
   "scripts": {
-    "prebuild": "npm run generate-sdk",
     "build": "tsc",
-    "predev": "npm run generate-sdk",
     "dev": "ts-node src/index.ts",
     "start": "node dist/src/index.js",
     "lint": "eslint src --ext .ts",

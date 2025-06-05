@@ -15,18 +15,18 @@ import { ProgressManager } from '../utils/progress';
 
 interface SetupOptions {
   folderPath?: string;
-  organizationName?: string;
   userName?: string;
   userEmail?: string;
   replicaName?: string;
   nonInteractive?: boolean;
+  force?: boolean;
 }
 
 export async function simpleOrganizationSetupCommand(folderPath?: string, options: SetupOptions = {}): Promise<void> {
   const targetPath = folderPath || '.';
   const absolutePath = path.resolve(targetPath);
   
-  console.log(chalk.blue('🚀 Simple Organization Setup\n'));
+  console.log(chalk.blue('🚀 Sensay Setup\n'));
   console.log(chalk.cyan(`📂 Working with folder: ${absolutePath}\n`));
 
   const progress = new ProgressManager();
@@ -56,11 +56,10 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
     }
 
     // Get or prompt for configuration values
-    let { organizationName, userName, userEmail, replicaName } = options;
+    let { userName, userEmail, replicaName } = options;
 
-    if (!organizationName || !userName || !userEmail || !replicaName) {
+    if (!userName || !userEmail || !replicaName) {
       const currentConfig = {
-        organizationName: organizationName || projectConfig.organizationName,
         userName: userName || projectConfig.userName,
         userEmail: userEmail || projectConfig.userEmail,
         replicaName: replicaName || projectConfig.replicaName,
@@ -68,26 +67,17 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
 
       if (options.nonInteractive) {
         // In non-interactive mode, use existing config or fail
-        if (!currentConfig.organizationName || !currentConfig.userName || !currentConfig.userEmail || !currentConfig.replicaName) {
+        if (!currentConfig.userName || !currentConfig.userEmail || !currentConfig.replicaName) {
           console.error(chalk.red('❌ Missing required configuration. In non-interactive mode, you must either:'));
-          console.error(chalk.red('   1. Provide command line options: --organization-name, --user-name, --user-email, --replica-name'));
+          console.error(chalk.red('   1. Provide command line options: --user-name, --user-email, --replica-name'));
           console.error(chalk.red('   2. Or have these values in your project config file (sensay.config.json)'));
           process.exit(1);
         }
-        organizationName = currentConfig.organizationName;
         userName = currentConfig.userName;
         userEmail = currentConfig.userEmail;
         replicaName = currentConfig.replicaName;
       } else {
         const questions = [
-        {
-          type: 'input',
-          name: 'organizationName',
-          message: 'Organization name:',
-          default: currentConfig.organizationName,
-          when: !currentConfig.organizationName,
-          validate: (input: string) => input.trim().length > 0 || 'Organization name is required'
-        },
         {
           type: 'input',
           name: 'userName',
@@ -119,7 +109,6 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
 
         const answers = await inquirer.prompt(questions);
         
-        organizationName = organizationName || currentConfig.organizationName || answers.organizationName;
         userName = userName || currentConfig.userName || answers.userName;
         userEmail = userEmail || currentConfig.userEmail || answers.userEmail;
         replicaName = replicaName || currentConfig.replicaName || answers.replicaName;
@@ -129,7 +118,6 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
     // Save project configuration
     await ConfigManager.saveProjectConfig({
       ...projectConfig,
-      organizationName,
       userName,
       userEmail,
       replicaName,
@@ -173,7 +161,7 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
       try {
         replica = await ReplicasService.getV1Replicas1(currentProjectConfig.replicaId);
         
-        // Update the replica with current settings
+        // Update the replica with current settings to ensure all are correct
         await ReplicasService.putV1Replicas(currentProjectConfig.replicaId, '2025-03-25', {
           name: replicaName!,
           shortDescription: `AI replica for ${replicaName}`,
@@ -219,7 +207,24 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
       if (replicaCreateResponse.success && replicaCreateResponse.uuid) {
         // Get the full replica details
         replica = await ReplicasService.getV1Replicas1(replicaCreateResponse.uuid);
-        replicaSpinner.succeed(`Replica created: ${replica.name}`);
+        replicaSpinner.text = 'Updating replica settings...';
+        
+        // Update replica with PUT to ensure all settings are correct
+        await ReplicasService.putV1Replicas(replicaCreateResponse.uuid, '2025-03-25', {
+          name: replicaName!,
+          shortDescription: `AI replica for ${replicaName}`,
+          greeting: 'Hello! How can I help you today?',
+          ownerID: user.id,
+          slug: replica.slug, // Keep the generated slug
+          llm: {
+            model: 'claude-3-5-haiku-latest',
+            memoryMode: 'rag-search',
+            systemMessage: systemMessage || 'You are a helpful AI assistant.',
+            tools: []
+          }
+        });
+        
+        replicaSpinner.succeed(`Replica created and configured: ${replica.name}`);
       } else {
         throw new Error('Failed to create replica');
       }
@@ -236,10 +241,9 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
       throw new Error('Failed to create or find replica');
     }
 
-    // Step 4: System message is already set during creation, skip update for now
-    // TODO: Check if there's a separate endpoint for updating system messages
+    // Step 4: System message status
     if (systemMessage) {
-      console.log(chalk.blue('ℹ️  System message was set during replica creation'));
+      console.log(chalk.blue('ℹ️  System message loaded and applied to replica'));
     } else {
       console.log(chalk.yellow('⚠️  No system-message.txt found - using default system message'));
     }
@@ -247,16 +251,45 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
     // Step 5: Process training data
     const { files, skipped } = await FileProcessor.scanTrainingFiles(targetPath);
     
+    // Always clear existing training data first (even if no new files to upload)
+    try {
+      await FileProcessor.clearExistingTrainingData(replica.uuid, options.force, options.nonInteractive);
+    } catch (error: any) {
+      if (error.message.includes('Use --force to automatically delete it')) {
+        // User needs to use force flag in non-interactive mode
+        console.error(chalk.red('❌ ' + error.message));
+        process.exit(1);
+      } else {
+        console.log(chalk.yellow('⚠️  Warning: Could not clear existing training data completely'));
+        console.log(chalk.gray(`   ${error.message}`));
+      }
+    }
+    
     if (files.length === 0) {
       console.log(chalk.yellow('⚠️  No training data found in training-data folder'));
+      console.log(chalk.blue('ℹ️  Replica training data has been cleared and is ready for new content'));
     } else {
       FileProcessor.displayFilesSummary(files, skipped);
 
       // Upload training data
       const trainingSpinner = progress.createSpinner('training', 'Uploading training data...');
       try {
-        await FileProcessor.uploadTrainingFiles(replica.uuid, files);
-        trainingSpinner.succeed(`Training data uploaded: ${files.length} files processed`);
+        const uploadResults = await FileProcessor.uploadTrainingFiles(replica.uuid, files, trainingSpinner);
+        const successful = uploadResults.filter(r => r.success).length;
+        const failed = uploadResults.filter(r => !r.success).length;
+        
+        if (failed > 0) {
+          trainingSpinner.succeed(`Training data upload completed: ${successful} successful, ${failed} failed`);
+          console.log(chalk.yellow('\n⚠️  Failed uploads:'));
+          uploadResults.filter(r => !r.success).forEach(r => {
+            console.log(chalk.gray(`   - ${r.file.relativePath}: ${r.error}`));
+          });
+        } else {
+          trainingSpinner.succeed(`Training data uploaded: ${files.length} files processed`);
+        }
+        
+        // Poll training status
+        await FileProcessor.pollTrainingStatus(replica.uuid, uploadResults, files.length);
       } catch (error: any) {
         trainingSpinner.fail(`Training data upload failed: ${error.message}`);
         // Don't throw - just warn and continue
@@ -264,8 +297,7 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
       }
     }
 
-    console.log(chalk.green('\n✅ Simple organization setup completed successfully!'));
-    console.log(chalk.cyan(`📋 Organization: ${organizationName}`));
+    console.log(chalk.green('\n✅ Setup completed successfully!'));
     console.log(chalk.cyan(`👤 User: ${userName} (${user.id})`));
     console.log(chalk.cyan(`🤖 Replica: ${replicaName} (${replica.uuid})`));
 
@@ -307,11 +339,11 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
 export function setupSimpleOrganizationSetupCommand(program: Command): void {
   program
     .command('simple-organization-setup [folder-path]')
-    .description('Set up organization, user, and replica with training data')
-    .option('-o, --organization-name <name>', 'Organization name')
+    .description('Set up user and replica with training data')
     .option('-u, --user-name <name>', 'User name')
     .option('-e, --user-email <email>', 'User email')
     .option('-r, --replica-name <name>', 'Replica name')
+    .option('-f, --force', 'Skip confirmation before deleting existing training data')
     .action((folderPath, options) => {
       const globalOptions = program.opts();
       return simpleOrganizationSetupCommand(folderPath, { ...options, nonInteractive: globalOptions.nonInteractive });
