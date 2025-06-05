@@ -14,7 +14,8 @@ program
 
 program
   .option('-v, --verbose', 'Enable verbose output')
-  .option('--no-color', 'Disable colored output');
+  .option('--no-color', 'Disable colored output')
+  .option('--non-interactive', 'Disable interactive mode (for scripts/CI)');
 
 // Setup commands
 setupClaimKeyCommand(program);
@@ -124,7 +125,55 @@ program.configureHelp({
 
 program.parse();
 
-// Show help if no command is provided
+// Show interactive mode by default if no command is provided (unless --non-interactive is used)
 if (!process.argv.slice(2).length) {
-  program.outputHelp();
+  const options = program.opts();
+  if (options.nonInteractive) {
+    program.outputHelp();
+  } else {
+    // Start interactive mode by default
+    const startInteractiveMode = async () => {
+      const inquirer = await import('inquirer');
+      
+      console.log(chalk.blue('🎯 Sensay CLI - Interactive Mode\n'));
+      
+      const { action } = await inquirer.default.prompt({
+        type: 'list',
+        name: 'action',
+        message: 'What would you like to do?',
+        choices: [
+          { name: '🔑 Claim API Key', value: 'claim-key' },
+          { name: '🚀 Simple Organization Setup', value: 'setup' },
+          { name: '❌ Exit', value: 'exit' }
+        ]
+      });
+
+      switch (action) {
+        case 'claim-key': {
+          const { claimKeyCommand } = await import('./commands/claim-key');
+          await claimKeyCommand({});
+          break;
+        }
+        case 'setup': {
+          // Ask for working folder path first
+          const { folderPath } = await inquirer.default.prompt({
+            type: 'input',
+            name: 'folderPath',
+            message: 'Working folder path for your project:',
+            default: '.',
+            validate: (input: string) => input.trim().length > 0 || 'Folder path is required'
+          });
+          
+          const { simpleOrganizationSetupCommand } = await import('./commands/simple-organization-setup');
+          await simpleOrganizationSetupCommand(folderPath.trim());
+          break;
+        }
+        case 'exit':
+          console.log(chalk.blue('👋 Goodbye!'));
+          break;
+      }
+    };
+    
+    startInteractiveMode().catch(console.error);
+  }
 }

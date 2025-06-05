@@ -19,6 +19,7 @@ interface SetupOptions {
   userName?: string;
   userEmail?: string;
   replicaName?: string;
+  nonInteractive?: boolean;
 }
 
 export async function simpleOrganizationSetupCommand(folderPath?: string, options: SetupOptions = {}): Promise<void> {
@@ -65,7 +66,20 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
         replicaName: replicaName || projectConfig.replicaName,
       };
 
-      const questions = [
+      if (options.nonInteractive) {
+        // In non-interactive mode, use existing config or fail
+        if (!currentConfig.organizationName || !currentConfig.userName || !currentConfig.userEmail || !currentConfig.replicaName) {
+          console.error(chalk.red('❌ Missing required configuration. In non-interactive mode, you must either:'));
+          console.error(chalk.red('   1. Provide command line options: --organization-name, --user-name, --user-email, --replica-name'));
+          console.error(chalk.red('   2. Or have these values in your project config file (sensay.config.json)'));
+          process.exit(1);
+        }
+        organizationName = currentConfig.organizationName;
+        userName = currentConfig.userName;
+        userEmail = currentConfig.userEmail;
+        replicaName = currentConfig.replicaName;
+      } else {
+        const questions = [
         {
           type: 'input',
           name: 'organizationName',
@@ -101,14 +115,15 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
           when: !currentConfig.replicaName,
           validate: (input: string) => input.trim().length > 0 || 'Replica name is required'
         }
-      ];
+        ];
 
-      const answers = await inquirer.prompt(questions);
-      
-      organizationName = organizationName || currentConfig.organizationName || answers.organizationName;
-      userName = userName || currentConfig.userName || answers.userName;
-      userEmail = userEmail || currentConfig.userEmail || answers.userEmail;
-      replicaName = replicaName || currentConfig.replicaName || answers.replicaName;
+        const answers = await inquirer.prompt(questions);
+        
+        organizationName = organizationName || currentConfig.organizationName || answers.organizationName;
+        userName = userName || currentConfig.userName || answers.userName;
+        userEmail = userEmail || currentConfig.userEmail || answers.userEmail;
+        replicaName = replicaName || currentConfig.replicaName || answers.replicaName;
+      }
     }
 
     // Save project configuration
@@ -297,5 +312,8 @@ export function setupSimpleOrganizationSetupCommand(program: Command): void {
     .option('-u, --user-name <name>', 'User name')
     .option('-e, --user-email <email>', 'User email')
     .option('-r, --replica-name <name>', 'Replica name')
-    .action(simpleOrganizationSetupCommand);
+    .action((folderPath, options) => {
+      const globalOptions = program.opts();
+      return simpleOrganizationSetupCommand(folderPath, { ...options, nonInteractive: globalOptions.nonInteractive });
+    });
 }

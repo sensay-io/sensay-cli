@@ -11,6 +11,7 @@ interface ClaimKeyOptions {
   name?: string;
   email?: string;
   saveLocation?: 'user' | 'project';
+  nonInteractive?: boolean;
 }
 
 export async function claimKeyCommand(options: ClaimKeyOptions): Promise<void> {
@@ -19,6 +20,14 @@ export async function claimKeyCommand(options: ClaimKeyOptions): Promise<void> {
   let { organizationName, name, email, saveLocation } = options;
 
   if (!organizationName || !name || !email) {
+    if (options.nonInteractive) {
+      console.error(chalk.red('❌ Missing required parameters. In non-interactive mode, you must provide:'));
+      console.error(chalk.red('   --organization-name <name>'));
+      console.error(chalk.red('   --name <name>'));
+      console.error(chalk.red('   --email <email>'));
+      process.exit(1);
+    }
+    
     const answers = await inquirer.prompt([
       {
         type: 'input',
@@ -52,16 +61,20 @@ export async function claimKeyCommand(options: ClaimKeyOptions): Promise<void> {
   }
 
   if (!saveLocation) {
-    const { location } = await inquirer.prompt({
-      type: 'list',
-      name: 'location',
-      message: 'Where would you like to save the API key?',
-      choices: [
-        { name: 'User config (~/.sensay/config.json)', value: 'user' },
-        { name: 'Current project (./sensay.config.json)', value: 'project' }
-      ]
-    });
-    saveLocation = location;
+    if (options.nonInteractive) {
+      saveLocation = 'user'; // Default to user config in non-interactive mode
+    } else {
+      const { location } = await inquirer.prompt({
+        type: 'list',
+        name: 'location',
+        message: 'Where would you like to save the API key?',
+        choices: [
+          { name: 'User config (~/.sensay/config.json)', value: 'user' },
+          { name: 'Current project (./sensay.config.json)', value: 'project' }
+        ]
+      });
+      saveLocation = location;
+    }
   }
 
   console.log(chalk.yellow('🔄 Claiming API key...'));
@@ -152,5 +165,8 @@ export function setupClaimKeyCommand(program: Command): void {
     .option('-n, --name <name>', 'Your name')
     .option('-e, --email <email>', 'Your email')
     .option('-s, --save-location <location>', 'Save location (user|project)')
-    .action(claimKeyCommand);
+    .action((options) => {
+      const globalOptions = program.opts();
+      return claimKeyCommand({ ...options, nonInteractive: globalOptions.nonInteractive });
+    });
 }
