@@ -48,8 +48,17 @@ program
         break;
       }
       case 'setup': {
+        // Ask for working folder path first
+        const { folderPath } = await inquirer.default.prompt({
+          type: 'input',
+          name: 'folderPath',
+          message: 'Working folder path for your project:',
+          default: '.',
+          validate: (input: string) => input.trim().length > 0 || 'Folder path is required'
+        });
+        
         const { simpleOrganizationSetupCommand } = await import('./commands/simple-organization-setup');
-        await simpleOrganizationSetupCommand();
+        await simpleOrganizationSetupCommand(folderPath.trim());
         break;
       }
       case 'exit':
