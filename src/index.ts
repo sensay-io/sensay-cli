@@ -4,6 +4,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { setupClaimKeyCommand } from './commands/claim-key';
 import { setupSimpleOrganizationSetupCommand } from './commands/simple-organization-setup';
+import { setupChatCommand } from './commands/chat';
 
 const program = new Command();
 
@@ -20,6 +21,7 @@ program
 // Setup commands
 setupClaimKeyCommand(program);
 setupSimpleOrganizationSetupCommand(program);
+setupChatCommand(program);
 
 // Interactive mode
 program
@@ -38,6 +40,7 @@ program
       choices: [
         { name: '🔑 Claim API Key', value: 'claim-key' },
         { name: '🚀 Simple Organization Setup', value: 'setup' },
+        { name: '💬 Chat with Replica', value: 'chat' },
         { name: '❌ Exit', value: 'exit' }
       ]
     });
@@ -60,6 +63,20 @@ program
         
         const { simpleOrganizationSetupCommand } = await import('./commands/simple-organization-setup');
         await simpleOrganizationSetupCommand(folderPath.trim());
+        break;
+      }
+      case 'chat': {
+        // Ask for working folder path first
+        const { folderPath } = await inquirer.default.prompt({
+          type: 'input',
+          name: 'folderPath',
+          message: 'Working folder path for your project:',
+          default: '.',
+          validate: (input: string) => input.trim().length > 0 || 'Folder path is required'
+        });
+        
+        const { chatCommand } = await import('./commands/chat');
+        await chatCommand(folderPath.trim());
         break;
       }
       case 'exit':
@@ -144,6 +161,7 @@ if (!process.argv.slice(2).length) {
         choices: [
           { name: '🔑 Claim API Key', value: 'claim-key' },
           { name: '🚀 Simple Organization Setup', value: 'setup' },
+          { name: '💬 Chat with Replica', value: 'chat' },
           { name: '❌ Exit', value: 'exit' }
         ]
       });
@@ -166,6 +184,20 @@ if (!process.argv.slice(2).length) {
           
           const { simpleOrganizationSetupCommand } = await import('./commands/simple-organization-setup');
           await simpleOrganizationSetupCommand(folderPath.trim());
+          break;
+        }
+        case 'chat': {
+          // Ask for working folder path first
+          const { folderPath } = await inquirer.default.prompt({
+            type: 'input',
+            name: 'folderPath',
+            message: 'Working folder path for your project:',
+            default: '.',
+            validate: (input: string) => input.trim().length > 0 || 'Folder path is required'
+          });
+          
+          const { chatCommand } = await import('./commands/chat');
+          await chatCommand(folderPath.trim());
           break;
         }
         case 'exit':
