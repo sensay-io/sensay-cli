@@ -166,6 +166,50 @@ The TypeScript compiler handles the extensions during build.
 5. **Test functionality** with `npm run dev`
 6. **Build for production** with `npm run build`
 
+## Standard Configuration Priority Pattern
+
+**ALL COMMANDS** must follow this exact priority order for configuration values:
+
+1. **Command line arguments** (highest priority)
+2. **Environment variables** 
+3. **Interactive prompts** (only if missing and not in non-interactive mode)
+4. **Project configuration** (`./sensay.config.json`)
+5. **User configuration** (`~/.sensay/config.json`) (lowest priority)
+
+### Implementation Pattern
+```typescript
+// 1. Get command line options
+let { replicaName, message } = options;
+
+// 2. Load configs
+const { projectConfig } = await ConfigManager.getMergedConfig(folderPath);
+const effectiveConfig = await ConfigManager.getEffectiveConfig(folderPath);
+
+// 3. Check for missing values and handle based on mode
+if (!replicaName) {
+  if (options.nonInteractive) {
+    // Try project config, then user config, then fail
+    replicaName = projectConfig.replicaName;
+    if (!replicaName) {
+      console.error('❌ Missing --replica-name parameter in non-interactive mode');
+      process.exit(1);
+    }
+  } else {
+    // Interactive prompt with default from config
+    const { replica } = await inquirer.prompt({
+      type: 'input',
+      name: 'replica',
+      message: 'Replica name:',
+      default: projectConfig.replicaName,
+      validate: (input: string) => input.trim().length > 0
+    });
+    replicaName = replica;
+  }
+}
+```
+
+**CRITICAL**: Never change this priority order. This pattern ensures consistency across all commands and proper automation support.
+
 ## Common Patterns
 
 ### API Service Usage
