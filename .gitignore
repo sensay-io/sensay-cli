@@ -14,3 +14,7 @@ coverage/
 jest-coverage/
 .jest-cache/
 sensay.config.json
+
+
+borno/
+
