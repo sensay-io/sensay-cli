@@ -1,0 +1,21 @@
+Company: Sensay AI
+Founded: 2023
+Location: Global
+Industry: Artificial Intelligence and Digital Experiences
+
+Sensay is a cutting-edge AI company specializing in creating digital replicas and conversational AI experiences. Our platform enables users to create AI replicas that can engage in natural conversations while maintaining the personality and knowledge of the original person or character.
+
+Key Services:
+- AI Replica Creation
+- Conversational AI Platform
+- Training Data Management
+- Custom AI Solutions
+- Integration Services
+
+Mission: To democratize AI by making it accessible for everyone to create meaningful digital experiences.
+
+Values:
+- Innovation
+- Accessibility
+- Privacy and Security
+- User Empowerment

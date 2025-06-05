@@ -7,14 +7,16 @@
     "sensay": "dist/src/index.js"
   },
   "scripts": {
+    "prebuild": "npm run generate-sdk",
     "build": "tsc",
+    "predev": "npm run generate-sdk",
     "dev": "ts-node src/index.ts",
     "start": "node dist/src/index.js",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
     "test": "jest --passWithNoTests",
-    "generate-sdk": "node -e \"const axios = require('axios'); const fs = require('fs-extra'); axios.get('https://api.sensay.io/schema').then(res => { fs.ensureDirSync('./src/generated'); fs.writeJsonSync('./src/generated/schema.json', res.data, { spaces: 2 }); console.log('✅ OpenAPI schema downloaded to src/generated/schema.json'); console.log('⚠️  Please manually update the generated types and API client if the schema has changed.'); console.log('📝 Compare with existing files in src/generated/ and update accordingly.'); }).catch(err => { console.error('❌ Failed to download schema:', err.message); process.exit(1); });\""
+    "generate-sdk": "./scripts/generate-sdk.sh"
   },
   "keywords": [
     "sensay",
@@ -25,7 +27,6 @@
   "license": "UNLICENSED",
   "private": true,
   "devDependencies": {
-    "@openapitools/openapi-generator-cli": "^2.20.2",
     "@types/fs-extra": "^11.0.4",
     "@types/inquirer": "^9.0.7",
     "@types/jest": "^29.5.0",
@@ -35,6 +36,9 @@
     "eslint": "^8.0.0",
     "jest": "^29.5.0",
     "nock": "^13.4.0",
+    "openapi-fetch": "^0.14.0",
+    "openapi-typescript": "^7.8.0",
+    "openapi-typescript-codegen": "^0.29.0",
     "swagger-typescript-api": "^13.2.0",
     "ts-jest": "^29.1.0",
     "ts-node": "^10.9.0",

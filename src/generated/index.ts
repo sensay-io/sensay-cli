@@ -1,7 +1,25 @@
-// Generated Sensay API SDK
+/* generated using openapi-typescript-codegen -- do not edit */
+/* istanbul ignore file */
+/* tslint:disable */
+/* eslint-disable */
+export { ApiError } from './core/ApiError';
+export { CancelablePromise, CancelError } from './core/CancelablePromise';
+export { OpenAPI } from './core/OpenAPI';
+export type { OpenAPIConfig } from './core/OpenAPI';
 
-export * from './types';
-export * from './api-client';
+export type { knowledgeBaseID_parameter } from './models/knowledgeBaseID_parameter';
+export type { replicaUUID_parameter } from './models/replicaUUID_parameter';
+export type { trainingID_parameter } from './models/trainingID_parameter';
+export type { WebhookRequest } from './models/WebhookRequest';
 
-// Re-export the main client class
-export { SensayApiClient as default } from './api-client';
+export { ApiKeysService } from './services/ApiKeysService';
+export { ChatCompletionsService } from './services/ChatCompletionsService';
+export { ChatHistoryService } from './services/ChatHistoryService';
+export { ChatWidgetIntegrationService } from './services/ChatWidgetIntegrationService';
+export { ConversationsService } from './services/ConversationsService';
+export { DiscordIntegrationService } from './services/DiscordIntegrationService';
+export { ExperimentalService } from './services/ExperimentalService';
+export { ReplicasService } from './services/ReplicasService';
+export { TelegramIntegrationService } from './services/TelegramIntegrationService';
+export { TrainingService } from './services/TrainingService';
+export { UsersService } from './services/UsersService';

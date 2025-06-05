@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
-import { SensayApiClient, SensayApiError } from '../generated/index';
+import { ApiKeysService, ApiError, OpenAPI } from '../generated/index';
 import { ConfigManager } from '../config/manager';
 
 const INTERNAL_CODE = 'GNEFSHAF';
@@ -67,8 +67,7 @@ export async function claimKeyCommand(options: ClaimKeyOptions): Promise<void> {
   console.log(chalk.yellow('🔄 Claiming API key...'));
 
   try {
-    const client = new SensayApiClient({});
-    const response = await client.claimApiKey(INTERNAL_CODE, {
+    const response = await ApiKeysService.postV1ApiKeysInvitesRedeem(INTERNAL_CODE, {
       organizationName: organizationName!,
       name: name!,
       email: email!
@@ -105,17 +104,20 @@ export async function claimKeyCommand(options: ClaimKeyOptions): Promise<void> {
   } catch (error: any) {
     console.error(chalk.red('❌ Failed to claim API key:'));
     
-    if (SensayApiClient.isSensayApiError(error)) {
-      // Properly typed Sensay API error
+    if (error instanceof ApiError) {
+      // Properly typed API error from generated client
       console.error(chalk.red(`Status: ${error.status}`));
-      console.error(chalk.red(`Error: ${error.response.error}`));
+      console.error(chalk.red(`Error: ${error.message}`));
       
-      if (error.requestId) {
-        console.error(chalk.gray(`Request ID: ${error.requestId}`));
-      }
-      
-      if (error.fingerprint) {
-        console.error(chalk.gray(`Fingerprint: ${error.fingerprint}`));
+      // Try to get additional error details from the body
+      if (error.body) {
+        const body = error.body as any;
+        if (body.request_id) {
+          console.error(chalk.gray(`Request ID: ${body.request_id}`));
+        }
+        if (body.fingerprint) {
+          console.error(chalk.gray(`Fingerprint: ${body.fingerprint}`));
+        }
       }
       
       if (error.status === 400) {
@@ -130,21 +132,8 @@ export async function claimKeyCommand(options: ClaimKeyOptions): Promise<void> {
       console.error(chalk.red('Network error: Could not reach the API'));
       console.error(chalk.red('Please check your internet connection'));
     } else {
-      // Other error - show raw response if available
-      console.error(chalk.red(`Error: ${error.message}`));
-      
-      if (error.response?.data) {
-        const data = error.response.data;
-        if (data.error) {
-          console.error(chalk.red(`API Error: ${data.error}`));
-        }
-        if (data.request_id) {
-          console.error(chalk.gray(`Request ID: ${data.request_id}`));
-        }
-        if (data.fingerprint) {
-          console.error(chalk.gray(`Fingerprint: ${data.fingerprint}`));
-        }
-      }
+      // Other error
+      console.error(chalk.red(`Error: ${error.message || error}`));
     }
     
     if (process.env.NODE_ENV !== 'test') {
