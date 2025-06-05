@@ -205,47 +205,19 @@ npm run start       # Run compiled version
 npm run lint        # ESLint code checking
 npm run typecheck   # TypeScript type checking
 npm run clean       # Remove build artifacts
-npm run test        # Run all tests
-npm run test:e2e    # Run end-to-end tests only
 npm run generate-sdk # Download latest OpenAPI schema for SDK updates
 ```
 
 ### Project Structure
 ```
 src/
-├── api/            # API client and interfaces
 ├── commands/       # CLI command implementations
 ├── config/         # Configuration management
+├── generated/      # Auto-generated API SDK
 ├── types/          # TypeScript type definitions
 ├── utils/          # Utility functions
 └── index.ts        # Main CLI entry point
-
-tests/
-├── e2e/            # End-to-end tests
-└── setup.ts        # Test configuration
 ```
-
-### Testing
-The project includes comprehensive end-to-end tests that verify the complete workflow:
-
-```bash
-# Run all tests
-npm test
-
-# Run E2E tests only
-npm run test:e2e
-
-# Build and test everything
-npm run build && npm test
-```
-
-**Test Coverage:**
-- ✅ Complete organization setup with system message and training data
-- ✅ Handling existing users and replicas gracefully
-- ✅ Missing system message and training data scenarios
-- ✅ Error handling (missing API key, API failures)
-- ✅ File processing and type filtering
-- ✅ Configuration management and persistence
 
 ## 🎨 Features
 
@@ -384,9 +356,9 @@ When the Sensay API schema changes, update the SDK:
 npm run generate-sdk
 
 # Compare the new schema with existing types
-# Update src/generated/types.ts and src/generated/api-client.ts manually
-# Test the changes
-npm run build && npm test
+# Update src/generated/ files as needed
+# Verify the changes
+npm run build && npm run typecheck
 
 # Commit the updates
 git add src/generated/ && git commit -m "Update SDK for API schema changes"
@@ -399,7 +371,7 @@ git add src/generated/ && git commit -m "Update SDK for API schema changes"
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Run tests: `npm run lint && npm run typecheck`
+4. Verify code quality: `npm run lint && npm run typecheck`
 5. Build: `npm run build`
 6. Submit a pull request
 
