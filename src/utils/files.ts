@@ -410,27 +410,52 @@ export class FileProcessor {
         
         // Get all training entries for this replica (handle pagination)
         let allReplicaEntries: any[] = [];
-        let page = 1;
+        let fetchSuccessful = false;
         
-        while (true) {
-          const trainingResponse = await TrainingService.getV1Training1(undefined, undefined, page.toString(), '100');
+        try {
+          let page = 1;
           
-          if (!trainingResponse.success) {
-            throw new Error('Failed to fetch training status');
+          while (true) {
+            const trainingResponse = await TrainingService.getV1Training1(undefined, undefined, page.toString(), '100');
+            
+            if (!trainingResponse.success) {
+              throw new Error('Failed to fetch training status');
+            }
+            
+            const replicaEntriesInPage = trainingResponse.items.filter(
+              (item: any) => item.replica_uuid === replicaUuid && knowledgeBaseIDs.includes(item.id)
+            );
+            
+            allReplicaEntries.push(...replicaEntriesInPage);
+            
+            // If we got fewer items than the limit, we've reached the end
+            if (trainingResponse.items.length < 100) {
+              break;
+            }
+            
+            page++;
           }
           
-          const replicaEntriesInPage = trainingResponse.items.filter(
-            (item: any) => item.replica_uuid === replicaUuid && knowledgeBaseIDs.includes(item.id)
-          );
+          fetchSuccessful = true;
+        } catch (error: any) {
+          // Log the error but continue polling
+          const remainingTime = (maxAttempts - attempts) * 5; // seconds
+          const minutes = Math.floor(remainingTime / 60);
+          const seconds = remainingTime % 60;
+          const timeDisplay = `${minutes}:${seconds.toString().padStart(2, '0')}`;
           
-          allReplicaEntries.push(...replicaEntriesInPage);
+          spinner.stop();
+          console.log(chalk.yellow(`⚠️  API error: ${error.message} - retrying... | Timeout in ${timeDisplay}`));
+          spinner.start();
+          spinner.text = `Retrying status check after error...`;
           
-          // If we got fewer items than the limit, we've reached the end
-          if (trainingResponse.items.length < 100) {
-            break;
-          }
-          
-          page++;
+          // Wait 5 seconds before next attempt
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          continue;
+        }
+        
+        if (!fetchSuccessful) {
+          continue; // Skip processing if fetch failed
         }
         
         latestTrainingResponse = { success: true, items: allReplicaEntries };
@@ -571,7 +596,8 @@ export class FileProcessor {
       
     } catch (error: any) {
       spinner.fail(chalk.red(`Failed to check training status: ${error.message}`));
-      throw error;
+      console.log(chalk.yellow('⚠️  Training status monitoring stopped due to persistent errors'));
+      // Don't throw - just end the monitoring gracefully
     }
   }
 }

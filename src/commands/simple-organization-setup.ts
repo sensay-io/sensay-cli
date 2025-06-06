@@ -273,8 +273,10 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
 
       // Upload training data
       const trainingSpinner = progress.createSpinner('training', 'Uploading training data...');
+      let uploadResults: any[] = [];
+      
       try {
-        const uploadResults = await FileProcessor.uploadTrainingFiles(replica.uuid, files, trainingSpinner);
+        uploadResults = await FileProcessor.uploadTrainingFiles(replica.uuid, files, trainingSpinner);
         const successful = uploadResults.filter(r => r.success).length;
         const failed = uploadResults.filter(r => !r.success).length;
         
@@ -288,12 +290,19 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
           trainingSpinner.succeed(`Training data uploaded: ${files.length} files processed`);
         }
         
-        // Poll training status
-        await FileProcessor.pollTrainingStatus(replica.uuid, uploadResults, files.length);
       } catch (error: any) {
         trainingSpinner.fail(`Training data upload failed: ${error.message}`);
         // Don't throw - just warn and continue
         console.log(chalk.yellow('⚠️  Some training files may not have uploaded successfully'));
+      }
+
+      // Poll training status (separate from upload error handling)
+      if (uploadResults.length > 0 && uploadResults.some(r => r.success)) {
+        try {
+          await FileProcessor.pollTrainingStatus(replica.uuid, uploadResults, files.length);
+        } catch (error: any) {
+          console.log(chalk.yellow(`⚠️  Training status monitoring ended with error: ${error.message}`));
+        }
       }
     }
 
