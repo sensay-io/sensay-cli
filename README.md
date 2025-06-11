@@ -1,3 +1,15 @@
+# ⚠️ Disclaimer
+
+**This project is in an early, experimental stage and is provided “as is” without any warranties or guarantees.**
+
+Please be aware that:
+
+-	The code has not been thoroughly tested and may contain bugs or unintended behavior.
+- Using this software could lead to data loss, misconfiguration, or other unexpected issues.
+-	You are solely responsible for any consequences resulting from the use of this software.
+
+**Use at your own risk.**
+
 # Sensay CLI
 
 A powerful command-line tool for managing Sensay API operations, including organization setup, user management, and replica training.
@@ -254,7 +266,7 @@ sensay claim-key
 **"Organization expired"**
 ```
 ⚠️  WARNING: Your organization has expired!
-Please contact support to update the expiration date manually in the database.
+Please contact support to update the expiration date.
 ```
 
 **API Error with Details**
