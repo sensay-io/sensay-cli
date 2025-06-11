@@ -266,7 +266,7 @@ sensay claim-key
 **"Organization expired"**
 ```
 ⚠️  WARNING: Your organization has expired!
-Please contact support to update the expiration date manually in the database.
+Please contact support to update the expiration date.
 ```
 
 **API Error with Details**
