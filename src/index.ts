@@ -5,6 +5,7 @@ import chalk from 'chalk';
 import { setupClaimKeyCommand } from './commands/claim-key';
 import { setupSimpleOrganizationSetupCommand } from './commands/simple-organization-setup';
 import { setupChatCommand } from './commands/chat';
+import { setupListCommand } from './commands/list';
 
 const program = new Command();
 
@@ -22,6 +23,7 @@ program
 setupClaimKeyCommand(program);
 setupSimpleOrganizationSetupCommand(program);
 setupChatCommand(program);
+setupListCommand(program);
 
 // Interactive mode
 program
@@ -41,6 +43,7 @@ program
         { name: '🔑 Claim API Key', value: 'claim-key' },
         { name: '🚀 Simple Organization Setup', value: 'setup' },
         { name: '💬 Chat with Replica', value: 'chat' },
+        { name: '📊 List Entities', value: 'list' },
         { name: '❌ Exit', value: 'exit' }
       ]
     });
@@ -77,6 +80,11 @@ program
         
         const { chatCommand } = await import('./commands/chat');
         await chatCommand(folderPath.trim());
+        break;
+      }
+      case 'list': {
+        const { listCommand } = await import('./commands/list');
+        await listCommand({});
         break;
       }
       case 'exit':
@@ -117,6 +125,12 @@ program
     
     console.log('  # Interactive mode');
     console.log('  sensay interactive\n');
+    
+    console.log('  # List current context entities');
+    console.log('  sensay list\n');
+    
+    console.log('  # List entities for specific replica');
+    console.log('  sensay list -r replica-uuid-here\n');
     
     console.log(chalk.yellow('File Structure:'));
     console.log('  your-project/');
@@ -162,6 +176,7 @@ if (!process.argv.slice(2).length) {
           { name: '🔑 Claim API Key', value: 'claim-key' },
           { name: '🚀 Simple Organization Setup', value: 'setup' },
           { name: '💬 Chat with Replica', value: 'chat' },
+          { name: '📊 List Entities', value: 'list' },
           { name: '❌ Exit', value: 'exit' }
         ]
       });
@@ -198,6 +213,11 @@ if (!process.argv.slice(2).length) {
           
           const { chatCommand } = await import('./commands/chat');
           await chatCommand(folderPath.trim());
+          break;
+        }
+        case 'list': {
+          const { listCommand } = await import('./commands/list');
+          await listCommand({});
           break;
         }
         case 'exit':
