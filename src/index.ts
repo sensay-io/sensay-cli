@@ -13,7 +13,8 @@ const program = new Command();
 program
   .name('sensay')
   .description('CLI tool for Sensay API operations')
-  .version('1.0.0');
+  .version('1.0.0')
+  .usage('[command] [options]');
 
 program
   .option('-v, --verbose', 'Enable verbose output')
