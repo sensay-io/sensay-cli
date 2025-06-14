@@ -284,8 +284,6 @@ Query and retrieve conversations and mentions for a replica. You can list
 all conversations for a replica, or get specific mentions within a conversation.
 Results can be saved to a JSON file for further processing.
 
-Mandatory arguments to long options are mandatory for short options too.
-
 Options:
 `;
       

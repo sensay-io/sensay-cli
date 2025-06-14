@@ -346,8 +346,6 @@ List and display information about organizations, users, and replicas.
 Without options, shows current context entities from your configuration.
 Use specific ID options to filter results.
 
-Mandatory arguments to long options are mandatory for short options too.
-
 Options:
 `;
       

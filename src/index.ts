@@ -163,8 +163,6 @@ program.configureHelp({
     let str = `Sensay CLI 1.0.1, a tool for Sensay API operations.
 Usage: ${helper.commandUsage(cmd)}
 
-Mandatory arguments to long options are mandatory for short options too.
-
 `;
 
     // Global Options section

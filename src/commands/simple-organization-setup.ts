@@ -373,8 +373,6 @@ The command looks for:
 - system-message.txt: Optional system message for the replica
 - training-data/: Folder containing training files (.txt, .md, .json, .csv, .log)
 
-Mandatory arguments to long options are mandatory for short options too.
-
 Options:
 `;
       

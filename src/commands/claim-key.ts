@@ -182,8 +182,6 @@ Claim an API key using the internal organization setup code. This command
 creates a new organization and user account, then returns an API key for
 accessing Sensay services.
 
-Mandatory arguments to long options are mandatory for short options too.
-
 Options:
 `;
       

@@ -201,8 +201,6 @@ Start a chat session with a replica. In interactive mode, you can have a
 continuous conversation. In non-interactive mode, send a single message
 and receive a response.
 
-Mandatory arguments to long options are mandatory for short options too.
-
 Options:
 `;
       
