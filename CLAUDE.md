@@ -205,41 +205,46 @@ The TypeScript compiler handles the extensions during build.
 
 1. **Command line arguments** (highest priority)
 2. **Environment variables** 
-3. **Interactive prompts** (only if missing and not in non-interactive mode)
+3. **Interactive prompts** (handled differently based on `silent` option):
+   - **CASE 1: without `silent` option**: ask the user for the value, but default it to the current value from priority chain
+   - **CASE 2: with `silent` option**: do not ask, use current or default value, and if there is no value set and the option is mandatory, return an error
 4. **Project configuration** (`./sensay.config.json`)
 5. **User configuration** (`~/.sensay/config.json`) (lowest priority)
 
 ### Implementation Pattern
+
+**IMPORTANT**: Use the reusable `OptionResolver` component to handle configuration priority properly following DDD and Clean Code principles.
+
 ```typescript
-// 1. Get command line options
-let { replicaName, message } = options;
+import { OptionResolver } from '../utils/option-resolver';
 
-// 2. Load configs
-const { projectConfig } = await ConfigManager.getMergedConfig(folderPath);
-const effectiveConfig = await ConfigManager.getEffectiveConfig(folderPath);
+// 1. Create option resolver with configuration context
+const optionResolver = new OptionResolver(folderPath, options);
 
-// 3. Check for missing values and handle based on mode
-if (!replicaName) {
-  if (options.nonInteractive) {
-    // Try project config, then user config, then fail
-    replicaName = projectConfig.replicaName;
-    if (!replicaName) {
-      console.error('❌ Missing --replica-name parameter in non-interactive mode');
-      process.exit(1);
-    }
-  } else {
-    // Interactive prompt with default from config
-    const { replica } = await inquirer.prompt({
-      type: 'input',
-      name: 'replica',
-      message: 'Replica name:',
-      default: projectConfig.replicaName,
-      validate: (input: string) => input.trim().length > 0
-    });
-    replicaName = replica;
-  }
-}
+// 2. Resolve required options with proper priority handling
+const replicaName = await optionResolver.resolve({
+  key: 'replicaName',
+  cliValue: options.replicaName,
+  promptMessage: 'Replica name:',
+  isRequired: true,
+  validator: (input: string) => input.trim().length > 0
+});
+
+const message = await optionResolver.resolve({
+  key: 'message',
+  cliValue: options.message,
+  promptMessage: 'Message to send:',
+  isRequired: false
+});
 ```
+
+The `OptionResolver` class handles:
+- Configuration loading and merging
+- Priority chain resolution (CLI → ENV → Interactive → Project → User)
+- Interactive vs non-interactive mode logic
+- Silent mode handling
+- Input validation
+- Error handling for missing required values
 
 **CRITICAL**: Never change this priority order. This pattern ensures consistency across all commands and proper automation support.
 
