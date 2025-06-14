@@ -157,9 +157,6 @@ program.configureHelp({
   subcommandTerm: (cmd) => cmd.name(),
   formatHelp: (cmd, helper) => {
     const termWidth = helper.padWidth(cmd, helper);
-    const helpWidth = helper.helpWidth || 80;
-    const itemIndentWidth = 2;
-    const itemSeparatorWidth = 2;
     
     // Header section
     let str = `Sensay CLI 1.0.1, a tool for Sensay API operations.

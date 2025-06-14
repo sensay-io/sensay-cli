@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
-import { ApiKeysService, ApiError, OpenAPI } from '../generated/index';
+import { ApiKeysService, ApiError } from '../generated/index';
 import { ConfigManager } from '../config/manager';
 
 const INTERNAL_CODE = 'GNEFSHAF';

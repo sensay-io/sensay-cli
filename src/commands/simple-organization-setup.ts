@@ -6,8 +6,7 @@ import {
   OpenAPI, 
   ApiError, 
   UsersService, 
-  ReplicasService, 
-  TrainingService 
+  ReplicasService
 } from '../generated/index';
 import { ConfigManager } from '../config/manager';
 import { FileProcessor } from '../utils/files';

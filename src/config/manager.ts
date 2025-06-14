@@ -1,7 +1,6 @@
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import * as os from 'os';
-import chalk from 'chalk';
 import { SensayConfig } from '../types/api';
 
 export interface ProjectConfig {
@@ -85,21 +84,21 @@ export class ConfigManager {
     
     // Merge userConfig
     for (const key in userConfig) {
-      if (userConfig.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(userConfig, key)) {
         (result as any)[key] = (userConfig as any)[key];
       }
     }
     
     // Merge projectConfig
     for (const key in projectConfig) {
-      if (projectConfig.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(projectConfig, key)) {
         (result as any)[key] = (projectConfig as any)[key];
       }
     }
     
     // Merge envConfig (highest priority)
     for (const key in envConfig) {
-      if (envConfig.hasOwnProperty(key) && (envConfig as any)[key] !== undefined) {
+      if (Object.prototype.hasOwnProperty.call(envConfig, key) && (envConfig as any)[key] !== undefined) {
         (result as any)[key] = (envConfig as any)[key];
       }
     }
