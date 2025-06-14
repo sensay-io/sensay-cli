@@ -18,12 +18,14 @@ This is a TypeScript CLI tool for managing Sensay API operations including.
 - Each Option ID has two versions: a long name for command line argument (e.g. `--verbose`), a short name for command line usage (e.g. `-v`). The 
 - The Option `-v` outputs API requests METHOD and URL; and status code of the Response to the debug console, in case of Errors also the Response Body is outputted to the error console.
 - The Option `-vv` outputs API requests METHOD, URL, HEADERS, and BODY; as well as the RESPONSE CODE, HEADERS, and BODY of the response.
+- **Security**: API Keys and other secrets in headers/body should be obfuscated in console output (only show first 4 and last 4 characters, e.g., `sk12...xy89`).
 
 ## Task rules
 
 - All new and changed functionalities must be tested automatically via end to end tests, that run the code in non-interactive mode.
 - For each new or changed functionality you must ask the User to test the functionality manually in interactive mode. You must provide a test case with detailed step-by-step instruction which include values to input.
-- Code must be easy to read, easy to maintain, follow DDD (Domain Driven Development) rules, follow Clean Code rules, 
+- Code must be easy to read, easy to maintain, follow DDD (Domain Driven Development) rules, follow Clean Code rules. 
+- Keep the instructions in CLAUDE.MD in sync with the decision taken by the User of Claude Code
 
 ## Commands
 
@@ -181,6 +183,7 @@ The TypeScript compiler handles the extensions during build.
 - Never commit `sensay.config.json` (contains API keys)
 - Always add config files to `.gitignore`
 - The API key provided by the user is provided via the option (--apikey)
+- When logging API requests/responses, always obfuscate sensitive data like API keys (show only first 4 and last 4 characters)
 
 ### 10. Testing Philosophy
 
