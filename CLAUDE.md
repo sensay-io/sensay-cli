@@ -46,13 +46,13 @@ This is a TypeScript CLI tool for managing Sensay API operations including.
 
 ## Key Architecture Decisions
 
-### 1. Fully Automated SDK Generation
+### 1. On-Demand SDK Generation
 
 **IMPORTANT**: Always use CLI tools for SDK generation, never write custom generation code.
 
 - Use `openapi-typescript-codegen` to generate complete TypeScript client from OpenAPI schema
-- Schema is automatically downloaded from `https://api.sensay.io/schema`
-- Generation happens before every build (`prebuild` and `predev` scripts)
+- Schema is automatically downloaded from `https://api.sensay.io/schema/internal`
+- Generation happens on-demand via `npm run generate-sdk` command
 - Generated files are in `src/generated/` and should never be manually edited
 
 ```bash
@@ -152,19 +152,19 @@ sensay-cli/
 
 ### 7. Build Process
 
-The build process automatically generates the SDK:
+The build process uses on-demand SDK generation:
 
 ```json
 {
   "scripts": {
-    "prebuild": "npm run generate-sdk",
     "build": "tsc",
-    "predev": "npm run generate-sdk", 
     "dev": "ts-node src/index.ts",
     "generate-sdk": "./scripts/generate-sdk.sh"
   }
 }
 ```
+
+SDK generation is triggered manually when needed with `npm run generate-sdk`.
 
 ### 8. Import Patterns
 
@@ -189,7 +189,7 @@ The TypeScript compiler handles the extensions during build.
 ## Development Workflow
 
 1. **Make changes** to source code
-2. **Auto-generate SDK** (happens automatically with `npm run dev` or `npm run build`)
+2. **Generate SDK when needed** with `npm run generate-sdk` (when API changes)
 3. **Use generated services** directly in code
 4. **Test compilation** with `npm run typecheck`
 5. **Test functionality** with `npm run dev`
