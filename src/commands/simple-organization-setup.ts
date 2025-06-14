@@ -6,8 +6,7 @@ import {
   OpenAPI, 
   ApiError, 
   UsersService, 
-  ReplicasService, 
-  TrainingService 
+  ReplicasService
 } from '../generated/index';
 import { ConfigManager } from '../config/manager';
 import { FileProcessor } from '../utils/files';
@@ -346,15 +345,48 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
 }
 
 export function setupSimpleOrganizationSetupCommand(program: Command): void {
-  program
+  const cmd = program
     .command('simple-organization-setup [folder-path]')
     .description('Set up user and replica with training data')
-    .option('-u, --user-name <name>', 'User name')
-    .option('-e, --user-email <email>', 'User email')
-    .option('-r, --replica-name <name>', 'Replica name')
-    .option('-f, --force', 'Skip confirmation before deleting existing training data')
+    .option('-u, --user-name <name>', 'user name for the account')
+    .option('-e, --user-email <email>', 'user email address')
+    .option('-r, --replica-name <name>', 'name for the replica/assistant')
+    .option('-f, --force', 'skip confirmation before deleting existing training data')
     .action((folderPath, options) => {
       const globalOptions = program.opts();
       return simpleOrganizationSetupCommand(folderPath, { ...options, nonInteractive: globalOptions.nonInteractive });
     });
+
+  // Configure help in wget style for this command
+  cmd.configureHelp({
+    formatHelp: (cmd, helper) => {
+      const termWidth = helper.padWidth(cmd, helper);
+      
+      let str = `Sensay CLI 1.0.1 - Organization Setup
+Usage: ${helper.commandUsage(cmd)}
+
+Set up a complete organization with user account and replica. This command
+creates a user, sets up a replica, and uploads training data from the specified
+folder. If no folder is specified, uses the current directory.
+
+Options:
+`;
+      
+      // Add options
+      cmd.options.forEach(option => {
+        const flags = helper.optionTerm(option);
+        const description = helper.optionDescription(option);
+        str += `  ${flags.padEnd(termWidth)}${description}\n`;
+      });
+      
+      str += `
+Examples:
+  sensay simple-organization-setup
+  sensay simple-organization-setup ./my-project
+  sensay simple-organization-setup -u "John Doe" -e "john@company.com" -r "Assistant"
+  sensay simple-organization-setup --force`;
+
+      return str;
+    }
+  });
 }

@@ -13,7 +13,8 @@ const program = new Command();
 program
   .name('sensay')
   .description('CLI tool for Sensay API operations')
-  .version('1.0.0');
+  .version('1.0.0')
+  .usage('[command] [options]');
 
 program
   .option('-v, --verbose', 'Enable verbose output')
@@ -101,65 +102,48 @@ program
     }
   });
 
-// Help command with detailed information
-program
-  .command('help-detailed')
-  .description('Show detailed help with examples')
-  .action(() => {
-    console.log(chalk.blue('📖 Sensay CLI - Detailed Help\n'));
-    
-    console.log(chalk.yellow('Environment Variables:'));
-    console.log('  SENSAY_API_KEY         - Your Sensay API key');
-    console.log('  SENSAY_ORGANIZATION_ID - Your organization ID');
-    console.log('  SENSAY_USER_ID         - Your user ID');
-    console.log('  SENSAY_BASE_URL        - API base URL (default: https://api.sensay.io)\n');
-    
-    console.log(chalk.yellow('Configuration Files:'));
-    console.log('  ~/.sensay/config.json  - User-wide configuration');
-    console.log('  ./sensay.config.json   - Project-specific configuration\n');
-    
-    console.log(chalk.yellow('Examples:'));
-    console.log('  # Claim an API key interactively');
-    console.log('  sensay claim-key\n');
-    
-    console.log('  # Claim with arguments');
-    console.log('  sensay claim-key -o "My Org" -n "John Doe" -e "john@example.com"\n');
-    
-    console.log('  # Setup organization with current folder');
-    console.log('  sensay simple-organization-setup\n');
-    
-    console.log('  # Setup with specific folder and arguments');
-    console.log('  sensay simple-organization-setup ./my-project -r "My Replica"\n');
-    
-    console.log('  # Interactive mode');
-    console.log('  sensay interactive\n');
-    
-    console.log('  # List current context entities');
-    console.log('  sensay list\n');
-    
-    console.log('  # List entities for specific replica');
-    console.log('  sensay list -r replica-uuid-here\n');
-    
-    console.log(chalk.yellow('File Structure:'));
-    console.log('  your-project/');
-    console.log('  ├── system-message.txt     # Optional: LLM system message');
-    console.log('  ├── training-data/         # Optional: Training files folder');
-    console.log('  │   ├── file1.txt');
-    console.log('  │   ├── file2.md');
-    console.log('  │   └── subfolder/');
-    console.log('  │       └── file3.json');
-    console.log('  └── sensay.config.json     # Auto-generated project config\n');
-    
-    console.log(chalk.yellow('Supported Training File Types:'));
-    console.log('  .txt, .md, .json, .csv, .log (max 10MB each)\n');
-    
-    console.log(chalk.green('💡 Tip: All commands support both interactive prompts and command-line arguments!'));
-  });
 
-// Error handling
+// Configure help to follow wget style
 program.configureHelp({
   sortSubcommands: true,
-  subcommandTerm: (cmd) => cmd.name()
+  subcommandTerm: (cmd) => cmd.name(),
+  formatHelp: (cmd, helper) => {
+    const termWidth = helper.padWidth(cmd, helper);
+    
+    // Header section
+    let str = `Sensay CLI 1.0.1, a tool for Sensay API operations.
+Usage: ${helper.commandUsage(cmd)}
+
+`;
+
+    // Global Options section
+    const globalOptions = cmd.options.filter(option => option.flags);
+    if (globalOptions.length > 0) {
+      str += 'Global Options:\n';
+      globalOptions.forEach(option => {
+        const flags = helper.optionTerm(option);
+        const description = helper.optionDescription(option);
+        str += `  ${flags.padEnd(termWidth)}${description}\n`;
+      });
+      str += '\n';
+    }
+
+    // Commands section
+    const commands = cmd.commands.filter((command: any) => !command._hidden);
+    if (commands.length > 0) {
+      str += 'Commands:\n';
+      commands.forEach((command: any) => {
+        const term = helper.subcommandTerm(command);
+        const description = helper.subcommandDescription(command) || '';
+        str += `  ${term.padEnd(termWidth)}${description}\n`;
+      });
+      str += '\n';
+    }
+
+    str += `Use 'sensay COMMAND --help' for more information on a command.`;
+
+    return str;
+  }
 });
 
 program.parse();

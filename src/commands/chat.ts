@@ -179,13 +179,48 @@ export async function chatCommand(folderPath?: string, options: ChatOptions = {}
 }
 
 export function setupChatCommand(program: Command): void {
-  program
+  const cmd = program
     .command('chat [folder-path]')
     .description('Chat with a replica')
-    .option('-r, --replica-name <name>', 'Replica name to chat with')
-    .option('-m, --message <text>', 'Single message (for non-interactive mode)')
+    .option('-r, --replica-name <name>', 'name of the replica to chat with')
+    .option('-m, --message <text>', 'single message for non-interactive mode')
     .action((folderPath, options) => {
       const globalOptions = program.opts();
       return chatCommand(folderPath, { ...options, nonInteractive: globalOptions.nonInteractive });
     });
+
+  // Configure help in wget style for this command
+  cmd.configureHelp({
+    formatHelp: (cmd, helper) => {
+      const termWidth = helper.padWidth(cmd, helper);
+      
+      let str = `Sensay CLI 1.0.1 - Chat with Replica
+Usage: ${helper.commandUsage(cmd)}
+
+Start a chat session with a replica. In interactive mode, you can have a
+continuous conversation. In non-interactive mode, send a single message
+and receive a response.
+
+Options:
+`;
+      
+      // Add options
+      cmd.options.forEach(option => {
+        const flags = helper.optionTerm(option);
+        const description = helper.optionDescription(option);
+        str += `  ${flags.padEnd(termWidth)}${description}\n`;
+      });
+      
+      str += `
+Examples:
+  sensay chat
+  sensay chat ./my-project
+  sensay chat -r "My Assistant" -m "Hello, how are you?"
+  sensay chat --replica-name "Support Bot" --non-interactive
+
+Type 'exit' or 'quit' to end an interactive chat session.`;
+
+      return str;
+    }
+  });
 }

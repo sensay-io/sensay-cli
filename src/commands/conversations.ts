@@ -260,16 +260,51 @@ async function saveToFile(data: any, outputPath: string): Promise<void> {
 }
 
 export function setupConversationsCommand(program: Command): void {
-  program
+  const cmd = program
     .command('conversations')
     .description('Query replica conversations and mentions')
-    .option('-r, --replica-id <id>', 'Replica ID to query')
-    .option('-c, --conversation-id <id>', 'Specific conversation ID to query for mentions')
-    .option('-o, --output <path>', 'Output file path (JSON format)')
-    .option('-m, --mentions-only', 'Only show mentions (requires conversation-id)')
-    .option('-l, --limit <number>', 'Limit number of results (default: 50)', parseInt)
-    .option('--non-interactive', 'Run in non-interactive mode')
+    .option('-r, --replica-id <id>', 'replica ID to query conversations for')
+    .option('-c, --conversation-id <id>', 'specific conversation ID to query mentions')
+    .option('-o, --output <path>', 'output file path in JSON format')
+    .option('-m, --mentions-only', 'show only mentions, requires conversation-id')
+    .option('-l, --limit <number>', 'limit number of results (default: 50)', parseInt)
     .action((options) => {
       return conversationsCommand(options);
     });
+
+  // Configure help in wget style for this command
+  cmd.configureHelp({
+    formatHelp: (cmd, helper) => {
+      const termWidth = helper.padWidth(cmd, helper);
+      
+      let str = `Sensay CLI 1.0.1 - Query Conversations
+Usage: ${helper.commandUsage(cmd)}
+
+Query and retrieve conversations and mentions for a replica. You can list
+all conversations for a replica, or get specific mentions within a conversation.
+
+Options:
+`;
+      
+      // Add options
+      cmd.options.forEach(option => {
+        const flags = helper.optionTerm(option);
+        const description = helper.optionDescription(option);
+        str += `  ${flags.padEnd(termWidth)}${description}\n`;
+      });
+      
+      str += `
+Examples:
+  sensay conversations
+  sensay conversations -r replica-123
+  sensay conversations --replica-id replica-123 --output conversations.json
+  sensay conversations -c conv-456 --mentions-only
+  sensay conversations -r replica-123 -l 100
+
+Use --mentions-only with --conversation-id to get specific mentions within
+a conversation.`;
+
+      return str;
+    }
+  });
 }

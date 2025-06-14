@@ -324,13 +324,47 @@ async function listTrainingItems(replicaId?: string): Promise<void> {
 }
 
 export function setupListCommand(program: Command): void {
-  program
+  const cmd = program
     .command('list')
     .description('List entities and their counts')
-    .option('-o, --organization <id>', 'List entities for a specific organization')
-    .option('-u, --user <id>', 'List entities for a specific user')
-    .option('-r, --replica <id>', 'List entities for a specific replica')
+    .option('-o, --organization <id>', 'list entities for specific organization ID')
+    .option('-u, --user <id>', 'list entities for specific user ID')
+    .option('-r, --replica <id>', 'list entities for specific replica ID')
     .action((options) => {
       return listCommand(options);
     });
+
+  // Configure help in wget style for this command
+  cmd.configureHelp({
+    formatHelp: (cmd, helper) => {
+      const termWidth = helper.padWidth(cmd, helper);
+      
+      let str = `Sensay CLI 1.0.1 - List Entities
+Usage: ${helper.commandUsage(cmd)}
+
+List and display information about organizations, users, and replicas.
+Use specific ID options to filter results.
+
+Options:
+`;
+      
+      // Add options
+      cmd.options.forEach(option => {
+        const flags = helper.optionTerm(option);
+        const description = helper.optionDescription(option);
+        str += `  ${flags.padEnd(termWidth)}${description}\n`;
+      });
+      
+      str += `
+Examples:
+  sensay list
+  sensay list --organization org-123
+  sensay list -u user-456
+  sensay list --replica replica-789
+
+Displays entity counts, IDs, names, and creation dates.`;
+
+      return str;
+    }
+  });
 }
