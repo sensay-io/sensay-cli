@@ -156,10 +156,53 @@ program
     console.log(chalk.green('💡 Tip: All commands support both interactive prompts and command-line arguments!'));
   });
 
-// Error handling
+// Configure help to follow wget style
 program.configureHelp({
   sortSubcommands: true,
-  subcommandTerm: (cmd) => cmd.name()
+  subcommandTerm: (cmd) => cmd.name(),
+  formatHelp: (cmd, helper) => {
+    const termWidth = helper.padWidth(cmd, helper);
+    const helpWidth = helper.helpWidth || 80;
+    const itemIndentWidth = 2;
+    const itemSeparatorWidth = 2;
+    
+    // Header section
+    let str = `Sensay CLI 1.0.1, a tool for Sensay API operations.
+Usage: ${helper.commandUsage(cmd)}
+
+Mandatory arguments to long options are mandatory for short options too.
+
+`;
+
+    // Global Options section
+    const globalOptions = cmd.options.filter(option => option.flags);
+    if (globalOptions.length > 0) {
+      str += 'Global Options:\n';
+      globalOptions.forEach(option => {
+        const flags = helper.optionTerm(option);
+        const description = helper.optionDescription(option);
+        str += `  ${flags.padEnd(termWidth)}${description}\n`;
+      });
+      str += '\n';
+    }
+
+    // Commands section
+    const commands = cmd.commands.filter((command: any) => !command._hidden);
+    if (commands.length > 0) {
+      str += 'Commands:\n';
+      commands.forEach((command: any) => {
+        const term = helper.subcommandTerm(command);
+        const description = helper.subcommandDescription(command) || '';
+        str += `  ${term.padEnd(termWidth)}${description}\n`;
+      });
+      str += '\n';
+    }
+
+    str += `Use 'sensay COMMAND --help' for more information on a command.
+Use 'sensay help-detailed' for examples and configuration information.`;
+
+    return str;
+  }
 });
 
 program.parse();

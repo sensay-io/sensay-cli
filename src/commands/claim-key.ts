@@ -158,15 +158,51 @@ export async function claimKeyCommand(options: ClaimKeyOptions): Promise<void> {
 }
 
 export function setupClaimKeyCommand(program: Command): void {
-  program
+  const cmd = program
     .command('claim-key')
     .description('Claim an API key using internal code')
-    .option('-o, --organization-name <name>', 'Organization name')
-    .option('-n, --name <name>', 'Your name')
-    .option('-e, --email <email>', 'Your email')
-    .option('-s, --save-location <location>', 'Save location (user|project)')
+    .option('-o, --organization-name <name>', 'organization name for your account')
+    .option('-n, --name <name>', 'your full name')
+    .option('-e, --email <email>', 'your email address')
+    .option('-s, --save-location <location>', 'save location: user or project (default: user)')
     .action((options) => {
       const globalOptions = program.opts();
       return claimKeyCommand({ ...options, nonInteractive: globalOptions.nonInteractive });
     });
+
+  // Configure help in wget style for this command
+  cmd.configureHelp({
+    formatHelp: (cmd, helper) => {
+      const termWidth = helper.padWidth(cmd, helper);
+      
+      let str = `Sensay CLI 1.0.1 - Claim API Key
+Usage: ${helper.commandUsage(cmd)}
+
+Claim an API key using the internal organization setup code. This command
+creates a new organization and user account, then returns an API key for
+accessing Sensay services.
+
+Mandatory arguments to long options are mandatory for short options too.
+
+Options:
+`;
+      
+      // Add options
+      cmd.options.forEach(option => {
+        const flags = helper.optionTerm(option);
+        const description = helper.optionDescription(option);
+        str += `  ${flags.padEnd(termWidth)}${description}\n`;
+      });
+      
+      str += `
+Examples:
+  sensay claim-key
+  sensay claim-key -o "My Company" -n "John Doe" -e "john@company.com"
+  sensay claim-key --save-location project
+
+The API key will be saved to your configuration and used for subsequent commands.`;
+
+      return str;
+    }
+  });
 }
