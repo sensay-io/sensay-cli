@@ -12,6 +12,7 @@ export type { replicaUUID_parameter } from './models/replicaUUID_parameter';
 export type { trainingID_parameter } from './models/trainingID_parameter';
 export type { WebhookRequest } from './models/WebhookRequest';
 
+export { AnalyticsService } from './services/AnalyticsService';
 export { ApiKeysService } from './services/ApiKeysService';
 export { ChatCompletionsService } from './services/ChatCompletionsService';
 export { ChatHistoryService } from './services/ChatHistoryService';
@@ -19,6 +20,8 @@ export { ChatWidgetIntegrationService } from './services/ChatWidgetIntegrationSe
 export { ConversationsService } from './services/ConversationsService';
 export { DiscordIntegrationService } from './services/DiscordIntegrationService';
 export { ExperimentalService } from './services/ExperimentalService';
+export { InternalService } from './services/InternalService';
+export { KnowledgeBaseService } from './services/KnowledgeBaseService';
 export { ReplicasService } from './services/ReplicasService';
 export { TelegramIntegrationService } from './services/TelegramIntegrationService';
 export { TrainingService } from './services/TrainingService';

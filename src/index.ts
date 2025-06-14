@@ -6,6 +6,7 @@ import { setupClaimKeyCommand } from './commands/claim-key';
 import { setupSimpleOrganizationSetupCommand } from './commands/simple-organization-setup';
 import { setupChatCommand } from './commands/chat';
 import { setupListCommand } from './commands/list';
+import { setupConversationsCommand } from './commands/conversations';
 
 const program = new Command();
 
@@ -24,6 +25,7 @@ setupClaimKeyCommand(program);
 setupSimpleOrganizationSetupCommand(program);
 setupChatCommand(program);
 setupListCommand(program);
+setupConversationsCommand(program);
 
 // Interactive mode
 program
@@ -44,6 +46,7 @@ program
         { name: '🚀 Simple Organization Setup', value: 'setup' },
         { name: '💬 Chat with Replica', value: 'chat' },
         { name: '📊 List Entities', value: 'list' },
+        { name: '🗣️ Query Conversations', value: 'conversations' },
         { name: '❌ Exit', value: 'exit' }
       ]
     });
@@ -85,6 +88,11 @@ program
       case 'list': {
         const { listCommand } = await import('./commands/list');
         await listCommand({});
+        break;
+      }
+      case 'conversations': {
+        const { conversationsCommand } = await import('./commands/conversations');
+        await conversationsCommand({});
         break;
       }
       case 'exit':
@@ -177,6 +185,7 @@ if (!process.argv.slice(2).length) {
           { name: '🚀 Simple Organization Setup', value: 'setup' },
           { name: '💬 Chat with Replica', value: 'chat' },
           { name: '📊 List Entities', value: 'list' },
+          { name: '🗣️ Query Conversations', value: 'conversations' },
           { name: '❌ Exit', value: 'exit' }
         ]
       });
@@ -218,6 +227,11 @@ if (!process.argv.slice(2).length) {
         case 'list': {
           const { listCommand } = await import('./commands/list');
           await listCommand({});
+          break;
+        }
+        case 'conversations': {
+          const { conversationsCommand } = await import('./commands/conversations');
+          await conversationsCommand({});
           break;
         }
         case 'exit':

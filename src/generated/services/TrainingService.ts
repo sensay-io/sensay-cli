@@ -4,6 +4,7 @@
 /* eslint-disable */
 import type { replicaUUID_parameter } from '../models/replicaUUID_parameter';
 import type { trainingID_parameter } from '../models/trainingID_parameter';
+import type { WebhookRequest } from '../models/WebhookRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -342,6 +343,39 @@ export class TrainingService {
             query: {
                 'filename': filename,
             },
+            errors: {
+                400: `Bad Request`,
+                401: `Unauthorized`,
+                404: `Not Found`,
+                415: `Unsupported Media Type`,
+                500: `Internal Server Error`,
+            },
+        });
+    }
+    /**
+     * Receive webhook notifications from the storage system
+     * Processes file upload notifications from the storage system and queues them for processing.
+     * @param requestBody
+     * @returns any Success
+     * @throws ApiError
+     */
+    public static postV1ReplicasTrainingFilesWebhook(
+        requestBody?: WebhookRequest,
+    ): CancelablePromise<{
+        /**
+         * Indicates if the webhook was processed successfully
+         */
+        success: boolean;
+        /**
+         * Optional message with details about the webhook processing
+         */
+        message?: string;
+    }> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/v1/replicas/training/files/webhook',
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 400: `Bad Request`,
                 401: `Unauthorized`,

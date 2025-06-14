@@ -75,11 +75,11 @@ export class ReplicasService {
              */
             ownerID: string;
             /**
-             * Visibility of the replica. When set to `true`, only the owner will be able to find the replica and chat with it.
+             * Visibility of the replica. When set to `true`, only the owner and users on the allowlist will be able to find the replica and chat with it.
              */
             private?: boolean;
             /**
-             * Emails of users who can use the replica.
+             * Emails of users who can use the replica when the replica is private.
              */
             whitelistEmails?: Array<string>;
             /**
@@ -251,11 +251,11 @@ export class ReplicasService {
              */
             ownerID: string;
             /**
-             * Visibility of the replica. When set to `true`, only the owner will be able to find the replica and chat with it.
+             * Visibility of the replica. When set to `true`, only the owner and users on the allowlist will be able to find the replica and chat with it.
              */
             private?: boolean;
             /**
-             * Emails of users who can use the replica.
+             * Emails of users who can use the replica when the replica is private.
              */
             whitelistEmails?: Array<string>;
             /**
@@ -367,11 +367,11 @@ export class ReplicasService {
          */
         ownerID: string;
         /**
-         * Visibility of the replica. When set to `true`, only the owner will be able to find the replica and chat with it.
+         * Visibility of the replica. When set to `true`, only the owner and users on the allowlist will be able to find the replica and chat with it.
          */
         private?: boolean;
         /**
-         * Emails of users who can use the replica.
+         * Emails of users who can use the replica when the replica is private.
          */
         whitelistEmails?: Array<string>;
         /**
@@ -513,11 +513,11 @@ export class ReplicasService {
              */
             ownerID: string;
             /**
-             * Visibility of the replica. When set to `true`, only the owner will be able to find the replica and chat with it.
+             * Visibility of the replica. When set to `true`, only the owner and users on the allowlist will be able to find the replica and chat with it.
              */
             private?: boolean;
             /**
-             * Emails of users who can use the replica.
+             * Emails of users who can use the replica when the replica is private.
              */
             whitelistEmails?: Array<string>;
             /**

@@ -102,4 +102,48 @@ export class DiscordIntegrationService {
             },
         });
     }
+    /**
+     * Create a replica Discord integration
+     * Integrates a replica to Discord. The default Sensay Discord integration will run a bot for you until you delete the integration.
+     * @param replicaUuid
+     * @param xApiVersion
+     * @param requestBody
+     * @returns any Discord integration created successfully
+     * @throws ApiError
+     */
+    public static postV1ReplicasIntegrationsDiscord(
+        replicaUuid: replicaUUID_parameter,
+        xApiVersion: string = '2025-03-25',
+        requestBody?: {
+            /**
+             * A Discord Token is a unique token that can be attained from the Discord Developer Portal. It is used to connect the discord integration to the replica.
+             */
+            discordToken: string;
+        },
+    ): CancelablePromise<{
+        /**
+         * Indicates the status of the request
+         */
+        success: boolean;
+    }> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/v1/replicas/{replicaUUID}/integrations/discord',
+            path: {
+                'replicaUUID': replicaUuid,
+            },
+            headers: {
+                'X-API-Version': xApiVersion,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Bad Request`,
+                401: `Unauthorized`,
+                404: `Not Found`,
+                415: `Unsupported Media Type`,
+                500: `Internal Server Error`,
+            },
+        });
+    }
 }

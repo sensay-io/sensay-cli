@@ -9,7 +9,7 @@ mkdir -p src/generated
 
 # Download OpenAPI schema
 echo "📥 Downloading OpenAPI schema..."
-curl -s https://api.sensay.io/schema > src/generated/schema.json
+curl -s https://api.sensay.io/schema/internal > src/generated/schema.json
 echo "✅ Schema downloaded successfully"
 
 # Generate TypeScript client using openapi-typescript-codegen
