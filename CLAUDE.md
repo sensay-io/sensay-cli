@@ -26,6 +26,7 @@ This is a TypeScript CLI tool for managing Sensay API operations including.
 - For each new or changed functionality you must ask the User to test the functionality manually in interactive mode. You must provide a test case with detailed step-by-step instruction which include values to input.
 - Code must be easy to read, easy to maintain, follow DDD (Domain Driven Development) rules, follow Clean Code rules. 
 - Keep the instructions in CLAUDE.MD in sync with the decision taken by the User of Claude Code
+- All entities you create on GitHub must have the tag `claude-code` assigned, if the entity has tags, e.g. Issues§.
 
 ## Commands
 
