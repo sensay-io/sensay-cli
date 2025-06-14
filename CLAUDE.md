@@ -4,11 +4,45 @@ This file contains important guidelines and patterns learned during development 
 
 ## Project Overview
 
-This is a TypeScript CLI tool for managing Sensay API operations including:
-- API key claiming with internal codes
-- Organization, user, and replica setup
-- Training data management and upload (text and file-based)
-- Interactive and command-line modes
+This is a TypeScript CLI tool for managing Sensay API operations including.
+
+- The tool must be able to perform the same operations in interactive mode in non-interactive mode.
+- Interactive mode does not require commands or parameters to run.
+- Always prioritize great user experiences for interactive mode.
+- The tool uses by default the current directory as the `project` path. It can be overridden with an Option.
+- The project uses the same name of entities and their properties used by the Sensay API.
+
+## Options
+
+- Each Option can be set in different ways, following this priorities: (1) environment variables (2) user settings file `~/.sensay/sensay.config.json` (3) project settings in `sensay.config.json` in the project directory
+- Each Option ID has two versions: a long name for command line argument (e.g. `--verbose`), a short name for command line usage (e.g. `-v`). The 
+- The Option `-v` outputs API requests METHOD and URL; and status code of the Response to the debug console, in case of Errors also the Response Body is outputted to the error console.
+- The Option `-vv` outputs API requests METHOD, URL, HEADERS, and BODY; as well as the RESPONSE CODE, HEADERS, and BODY of the response.
+
+## Task rules
+
+- All new and changed functionalities must be tested automatically via end to end tests, that run the code in non-interactive mode.
+- For each new or changed functionality you must ask the User to test the functionality manually in interactive mode. You must provide a test case with detailed step-by-step instruction which include values to input.
+- Code must be easy to read, easy to maintain, follow DDD (Domain Driven Development) rules, follow Clean Code rules, 
+
+## Commands
+
+- Commands must reuse the code for their interactive and non-interactive mode.
+
+### Interactive mode
+
+- When an Option used by a Command (for example OrganizationUUID) is already specified, it still asked to the user, but it is set as default option. The Option `silent` skips this step.
+- When an Option used by a Command is not specified, it is saved to the project settings file, if the Option `save` is specified.
+
+#### Entities dialog
+
+- Entities are Selectable via a CLI GUI Dialog similar to Commander, which allows to navigate the entities hierarchy via arrows. (e.g. first panel shows Organizations, second panel shows Users, third panel shows Replicas)
+- Pressing the letter `r` when the dialog is open refreshes the entities of the current level of the hierarchy. (e.g. if the panel showing Replicas is selected, the Replicas shown in that panel are LISTED again and refreshed on the screen, and the current selected Replica is not unselected)
+
+### Non-interactive mode
+
+- Each Command has three version: a long name (e.g. `--verbose`) and a short version (e.g. `-v`)
+
 
 ## Key Architecture Decisions
 
@@ -28,8 +62,6 @@ npx openapi-typescript-codegen \
   --output src/generated \
   --client fetch
 ```
-
-### 2. Use Generated Services Directly
 
 **NEVER** create wrapper classes. Always use the generated services directly:
 
@@ -148,13 +180,10 @@ The TypeScript compiler handles the extensions during build.
 
 - Never commit `sensay.config.json` (contains API keys)
 - Always add config files to `.gitignore`
-- API keys are stored in project config, user config, or environment variables
-- Priority: env vars > project config > user config
+- The API key provided by the user is provided via the option (--apikey)
 
 ### 10. Testing Philosophy
 
-- No complex e2e tests (user prefers simpler approach)
-- Focus on TypeScript compilation and basic functionality
 - Use `jest --passWithNoTests` for test script
 
 ## Development Workflow
