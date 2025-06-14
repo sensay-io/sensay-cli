@@ -282,7 +282,6 @@ Usage: ${helper.commandUsage(cmd)}
 
 Query and retrieve conversations and mentions for a replica. You can list
 all conversations for a replica, or get specific mentions within a conversation.
-Results can be saved to a JSON file for further processing.
 
 Options:
 `;
@@ -303,7 +302,7 @@ Examples:
   sensay conversations -r replica-123 -l 100
 
 Use --mentions-only with --conversation-id to get specific mentions within
-a conversation. Without --replica-id, uses the project configuration.`;
+a conversation.`;
 
       return str;
     }

@@ -343,7 +343,6 @@ export function setupListCommand(program: Command): void {
 Usage: ${helper.commandUsage(cmd)}
 
 List and display information about organizations, users, and replicas.
-Without options, shows current context entities from your configuration.
 Use specific ID options to filter results.
 
 Options:
@@ -363,8 +362,7 @@ Examples:
   sensay list -u user-456
   sensay list --replica replica-789
 
-The command displays entity counts, IDs, names, and creation dates for
-each type of entity in your Sensay account.`;
+Displays entity counts, IDs, names, and creation dates.`;
 
       return str;
     }

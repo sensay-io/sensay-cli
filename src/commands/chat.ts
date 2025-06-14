@@ -218,8 +218,7 @@ Examples:
   sensay chat -r "My Assistant" -m "Hello, how are you?"
   sensay chat --replica-name "Support Bot" --non-interactive
 
-The command uses the project configuration to determine which replica to chat
-with. Type 'exit' or 'quit' to end an interactive chat session.`;
+Type 'exit' or 'quit' to end an interactive chat session.`;
 
       return str;
     }

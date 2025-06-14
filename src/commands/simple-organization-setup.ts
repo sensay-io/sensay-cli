@@ -369,10 +369,6 @@ Set up a complete organization with user account and replica. This command
 creates a user, sets up a replica, and uploads training data from the specified
 folder. If no folder is specified, uses the current directory.
 
-The command looks for:
-- system-message.txt: Optional system message for the replica
-- training-data/: Folder containing training files (.txt, .md, .json, .csv, .log)
-
 Options:
 `;
       
@@ -388,17 +384,7 @@ Examples:
   sensay simple-organization-setup
   sensay simple-organization-setup ./my-project
   sensay simple-organization-setup -u "John Doe" -e "john@company.com" -r "Assistant"
-  sensay simple-organization-setup --force
-
-File Structure:
-  project-folder/
-  ├── system-message.txt       # Optional: LLM system message
-  ├── training-data/           # Optional: Training files
-  │   ├── company-info.txt
-  │   ├── features.md
-  │   └── subfolder/
-  │       └── more-data.json
-  └── sensay.config.json       # Generated: Project configuration`;
+  sensay simple-organization-setup --force`;
 
       return str;
     }

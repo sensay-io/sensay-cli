@@ -102,55 +102,6 @@ program
     }
   });
 
-// Help command with detailed information
-program
-  .command('help-detailed')
-  .description('Show detailed help with examples')
-  .action(() => {
-    console.log('Sensay CLI 1.0.1 - Detailed Help and Configuration\n');
-    
-    console.log('Environment Variables:');
-    console.log('  SENSAY_API_KEY         Your Sensay API key');
-    console.log('  SENSAY_ORGANIZATION_ID Your organization ID');
-    console.log('  SENSAY_USER_ID         Your user ID');
-    console.log('  SENSAY_BASE_URL        API base URL (default: https://api.sensay.io)\n');
-    
-    console.log('Configuration Files:');
-    console.log('  ~/.sensay/config.json  User-wide configuration');
-    console.log('  ./sensay.config.json   Project-specific configuration\n');
-    
-    console.log('Configuration Priority (highest to lowest):');
-    console.log('  1. Command line arguments');
-    console.log('  2. Environment variables');
-    console.log('  3. Interactive prompts (when not using --non-interactive)');
-    console.log('  4. Project configuration (./sensay.config.json)');
-    console.log('  5. User configuration (~/.sensay/config.json)\n');
-    
-    console.log('Common Usage Examples:');
-    console.log('  sensay claim-key');
-    console.log('  sensay claim-key -o "My Org" -n "John Doe" -e "john@example.com"');
-    console.log('  sensay simple-organization-setup');
-    console.log('  sensay simple-organization-setup ./my-project -r "My Replica"');
-    console.log('  sensay chat -r "Assistant" -m "Hello"');
-    console.log('  sensay list --organization org-123');
-    console.log('  sensay conversations -r replica-456 --output results.json\n');
-    
-    console.log('Project File Structure:');
-    console.log('  your-project/');
-    console.log('  ├── system-message.txt     Optional: LLM system message');
-    console.log('  ├── training-data/         Optional: Training files folder');
-    console.log('  │   ├── file1.txt');
-    console.log('  │   ├── file2.md');
-    console.log('  │   └── subfolder/');
-    console.log('  │       └── file3.json');
-    console.log('  └── sensay.config.json     Auto-generated project config\n');
-    
-    console.log('Supported Training File Types:');
-    console.log('  .txt, .md, .json, .csv, .log (max 10MB each)\n');
-    
-    console.log('All commands support both interactive prompts and command-line arguments.');
-    console.log('Use --non-interactive flag for script automation.');
-  });
 
 // Configure help to follow wget style
 program.configureHelp({
@@ -189,8 +140,7 @@ Usage: ${helper.commandUsage(cmd)}
       str += '\n';
     }
 
-    str += `Use 'sensay COMMAND --help' for more information on a command.
-Use 'sensay help-detailed' for examples and configuration information.`;
+    str += `Use 'sensay COMMAND --help' for more information on a command.`;
 
     return str;
   }

@@ -198,7 +198,7 @@ Examples:
   sensay claim-key -o "My Company" -n "John Doe" -e "john@company.com"
   sensay claim-key --save-location project
 
-The API key will be saved to your configuration and used for subsequent commands.`;
+The API key will be saved and used for subsequent commands.`;
 
       return str;
     }
