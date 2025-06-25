@@ -8,6 +8,7 @@ import { setupChatCommand } from './commands/chat';
 import { setupListCommand } from './commands/list';
 import { setupConversationsCommand } from './commands/conversations';
 import { setupRetrainFailedCommand } from './commands/retrain-failed';
+import { setupHashKeyCommand } from './commands/hash-key';
 
 const program = new Command();
 
@@ -29,6 +30,7 @@ setupChatCommand(program);
 setupListCommand(program);
 setupConversationsCommand(program);
 setupRetrainFailedCommand(program);
+setupHashKeyCommand(program);
 
 // Interactive mode
 program

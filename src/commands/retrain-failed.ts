@@ -133,14 +133,20 @@ export async function retrainFailedCommand(folderPath: string, options: RetrainF
         try {
           const response = await KnowledgeBaseService.getV1ReplicasKnowledgeBase(
             replica.uuid,
-            'UNPROCESSABLE',
+            undefined,  // Get all statuses for now
             undefined,
             page,
             pageSize
           );
           const items = response.items || [];
           
-          failedItems.push(...items);
+          
+          // Filter for failed items manually
+          const itemsWithFailedStatus = items.filter((item: any) => 
+            FAILED_STATUSES.includes(item.status)
+          );
+          
+          failedItems.push(...itemsWithFailedStatus);
           
           hasMore = items.length === pageSize;
           page++;
