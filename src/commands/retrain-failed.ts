@@ -15,10 +15,8 @@ interface RetrainFailedOptions {
   save?: boolean;
 }
 
-// Error statuses that indicate failed training
-const FAILED_STATUSES = [
-  'UNPROCESSABLE'
-];
+// Status that indicates item cannot be retrained
+const UNPROCESSABLE_STATUS = 'UNPROCESSABLE';
 
 export async function retrainFailedCommand(folderPath: string, options: RetrainFailedOptions = {}) {
   const progress = new ProgressManager();
@@ -141,12 +139,12 @@ export async function retrainFailedCommand(folderPath: string, options: RetrainF
           const items = response.items || [];
           
           
-          // Filter for failed items manually
-          const itemsWithFailedStatus = items.filter((item: any) => 
-            FAILED_STATUSES.includes(item.status)
+          // Filter for items with errors (excluding UNPROCESSABLE ones)
+          const itemsWithErrors = items.filter((item: any) => 
+            item.error && item.status !== UNPROCESSABLE_STATUS
           );
           
-          failedItems.push(...itemsWithFailedStatus);
+          failedItems.push(...itemsWithErrors);
           
           hasMore = items.length === pageSize;
           page++;
@@ -156,7 +154,7 @@ export async function retrainFailedCommand(folderPath: string, options: RetrainF
         }
       }
       
-      spinner.succeed(`Found ${failedItems.length} failed training items`);
+      spinner.succeed(`Found ${failedItems.length} failed training items (excluding UNPROCESSABLE)`);
       totalFailedItems += failedItems.length;
 
       if (failedItems.length === 0) {
@@ -164,16 +162,29 @@ export async function retrainFailedCommand(folderPath: string, options: RetrainF
         continue;
       }
 
-      // Show breakdown by error type
-      const errorBreakdown: Record<string, number> = {};
+      // Show breakdown by error type and message
+      const statusBreakdown: Record<string, number> = {};
+      const errorMessages: Record<string, number> = {};
+      
       failedItems.forEach(item => {
-        errorBreakdown[item.status] = (errorBreakdown[item.status] || 0) + 1;
+        statusBreakdown[item.status] = (statusBreakdown[item.status] || 0) + 1;
+        if (item.error?.message) {
+          const errorKey = item.error.message.substring(0, 100); // Truncate long messages
+          errorMessages[errorKey] = (errorMessages[errorKey] || 0) + 1;
+        }
       });
 
-      console.log(chalk.yellow('\nError breakdown:'));
-      Object.entries(errorBreakdown).forEach(([status, count]) => {
+      console.log(chalk.yellow('\nStatus breakdown:'));
+      Object.entries(statusBreakdown).forEach(([status, count]) => {
         console.log(`  ${status}: ${count}`);
       });
+      
+      if (Object.keys(errorMessages).length > 0) {
+        console.log(chalk.yellow('\nError messages:'));
+        Object.entries(errorMessages).forEach(([message, count]) => {
+          console.log(`  ${message}${message.length >= 100 ? '...' : ''}: ${count}`);
+        });
+      }
 
       // Confirm retraining
       if (!options.force && !options.silent) {
@@ -241,7 +252,7 @@ export function setupRetrainFailedCommand(program: Command) {
   program
     .command('retrain-failed')
     .alias('rf')
-    .description('Retrain failed knowledge base items for a replica or all replicas')
+    .description('Retrain failed knowledge base items (with errors) for a replica or all replicas, excluding UNPROCESSABLE items')
     .option('-r, --replica-uuid <uuid>', 'UUID of the replica')
     .option('-a, --all-replicas', 'Process all replicas')
     .option('-f, --force', 'Skip confirmation prompt')
@@ -278,7 +289,7 @@ async function monitorTrainingStatus(
 
           if (status === 'READY') {
             completedCount++;
-          } else if (status === 'UNPROCESSABLE') {
+          } else if (item.error && status !== UNPROCESSABLE_STATUS) {
             failedCount++;
           }
         } catch (error) {

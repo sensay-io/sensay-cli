@@ -104,7 +104,8 @@ export class ReplicasService {
                  */
                 model?: 'gpt-4o' | 'claude-3-5-haiku-latest' | 'claude-3-7-sonnet-latest' | 'claude-4-sonnet-20250514' | 'grok-2-latest' | 'grok-3-beta' | 'deepseek-chat' | 'o3-mini' | 'gpt-4o-mini' | 'huggingface-eva' | 'huggingface-dolphin-llama';
                 /**
-                 * The memory mode of the replica.
+                 * Deprecated. The system will automatically choose the best approach.
+                 * @deprecated
                  */
                 memoryMode?: 'prompt-caching' | 'rag-search';
                 /**
@@ -115,7 +116,7 @@ export class ReplicasService {
                  * The replica's tools. Tools enable agents to interact with the world. `getTokenInfo`: Allows replica to get token information
                  *
                  */
-                tools?: Array<'getTokenInfo' | 'getUdaoTokenInfo' | 'getSensayTokenInfo' | 'getTokenInfoMEAI' | 'answerToLife' | 'toolhouse'>;
+                tools?: Array<'getTokenInfo' | 'getUdaoTokenInfo' | 'getSensayTokenInfo' | 'getTokenInfoMEAI' | 'answerToLife' | 'toolhouse' | 'brightUnionGetQuoteTool' | 'brightUnionGetCoverablesTool'>;
             };
             /**
              * Text that can be used to generate a voice preview.
@@ -280,7 +281,8 @@ export class ReplicasService {
                  */
                 model?: 'gpt-4o' | 'claude-3-5-haiku-latest' | 'claude-3-7-sonnet-latest' | 'claude-4-sonnet-20250514' | 'grok-2-latest' | 'grok-3-beta' | 'deepseek-chat' | 'o3-mini' | 'gpt-4o-mini' | 'huggingface-eva' | 'huggingface-dolphin-llama';
                 /**
-                 * The memory mode of the replica.
+                 * Deprecated. The system will automatically choose the best approach.
+                 * @deprecated
                  */
                 memoryMode?: 'prompt-caching' | 'rag-search';
                 /**
@@ -291,7 +293,7 @@ export class ReplicasService {
                  * The replica's tools. Tools enable agents to interact with the world. `getTokenInfo`: Allows replica to get token information
                  *
                  */
-                tools?: Array<'getTokenInfo' | 'getUdaoTokenInfo' | 'getSensayTokenInfo' | 'getTokenInfoMEAI' | 'answerToLife' | 'toolhouse'>;
+                tools?: Array<'getTokenInfo' | 'getUdaoTokenInfo' | 'getSensayTokenInfo' | 'getTokenInfoMEAI' | 'answerToLife' | 'toolhouse' | 'brightUnionGetQuoteTool' | 'brightUnionGetCoverablesTool'>;
             };
             /**
              * Text that can be used to generate a voice preview.
@@ -396,7 +398,8 @@ export class ReplicasService {
              */
             model?: 'gpt-4o' | 'claude-3-5-haiku-latest' | 'claude-3-7-sonnet-latest' | 'claude-4-sonnet-20250514' | 'grok-2-latest' | 'grok-3-beta' | 'deepseek-chat' | 'o3-mini' | 'gpt-4o-mini' | 'huggingface-eva' | 'huggingface-dolphin-llama';
             /**
-             * The memory mode of the replica.
+             * Deprecated. The system will automatically choose the best approach.
+             * @deprecated
              */
             memoryMode?: 'prompt-caching' | 'rag-search';
             /**
@@ -407,7 +410,7 @@ export class ReplicasService {
              * The replica's tools. Tools enable agents to interact with the world. `getTokenInfo`: Allows replica to get token information
              *
              */
-            tools?: Array<'getTokenInfo' | 'getUdaoTokenInfo' | 'getSensayTokenInfo' | 'getTokenInfoMEAI' | 'answerToLife' | 'toolhouse'>;
+            tools?: Array<'getTokenInfo' | 'getUdaoTokenInfo' | 'getSensayTokenInfo' | 'getTokenInfoMEAI' | 'answerToLife' | 'toolhouse' | 'brightUnionGetQuoteTool' | 'brightUnionGetCoverablesTool'>;
         };
         /**
          * Text that can be used to generate a voice preview.
@@ -542,7 +545,8 @@ export class ReplicasService {
                  */
                 model?: 'gpt-4o' | 'claude-3-5-haiku-latest' | 'claude-3-7-sonnet-latest' | 'claude-4-sonnet-20250514' | 'grok-2-latest' | 'grok-3-beta' | 'deepseek-chat' | 'o3-mini' | 'gpt-4o-mini' | 'huggingface-eva' | 'huggingface-dolphin-llama';
                 /**
-                 * The memory mode of the replica.
+                 * Deprecated. The system will automatically choose the best approach.
+                 * @deprecated
                  */
                 memoryMode?: 'prompt-caching' | 'rag-search';
                 /**
@@ -553,7 +557,7 @@ export class ReplicasService {
                  * The replica's tools. Tools enable agents to interact with the world. `getTokenInfo`: Allows replica to get token information
                  *
                  */
-                tools?: Array<'getTokenInfo' | 'getUdaoTokenInfo' | 'getSensayTokenInfo' | 'getTokenInfoMEAI' | 'answerToLife' | 'toolhouse'>;
+                tools?: Array<'getTokenInfo' | 'getUdaoTokenInfo' | 'getSensayTokenInfo' | 'getTokenInfoMEAI' | 'answerToLife' | 'toolhouse' | 'brightUnionGetQuoteTool' | 'brightUnionGetCoverablesTool'>;
             };
             /**
              * Text that can be used to generate a voice preview.
