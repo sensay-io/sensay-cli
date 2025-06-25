@@ -212,7 +212,7 @@ export async function retrainFailedCommand(folderPath: string, options: RetrainF
         try {
           // Update status to trigger retraining by patching to restart processing
           await KnowledgeBaseService.patchV1ReplicasKnowledgeBase(
-            item.knowledgeBaseID,
+            item.id || item.knowledgeBaseID,  // Handle both field names
             replica.uuid,
             {
               status: 'NEW'
@@ -220,7 +220,7 @@ export async function retrainFailedCommand(folderPath: string, options: RetrainF
           );
           retrainedCount++;
         } catch (error: any) {
-          errors.push(`Failed to retrain item ${item.knowledgeBaseID}: ${error.message}`);
+          errors.push(`Failed to retrain item ${item.id || item.knowledgeBaseID}: ${error.message}`);
         }
       }
 
@@ -234,7 +234,7 @@ export async function retrainFailedCommand(folderPath: string, options: RetrainF
 
       // Monitor training status
       console.log(chalk.cyan('\nMonitoring training status...'));
-      await monitorTrainingStatus(replica.uuid, failedItems.map(i => i.knowledgeBaseID), progress);
+      await monitorTrainingStatus(replica.uuid, failedItems.map(i => i.id || i.knowledgeBaseID), progress);
     }
 
     // Summary
@@ -283,7 +283,7 @@ async function monitorTrainingStatus(
 
       for (const id of itemIds) {
         try {
-          const item = await KnowledgeBaseService.getV1ReplicasKnowledgeBase1(id, replicaUuid);
+          const item = await KnowledgeBaseService.getV1KnowledgeBase(id);
           const status = item.status || 'UNKNOWN';
           statusCounts[status] = (statusCounts[status] || 0) + 1;
 
