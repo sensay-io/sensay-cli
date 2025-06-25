@@ -34,8 +34,8 @@ async function runKBTypeTest(
   timeoutMs: number,
   skipChatVerification: boolean
 ): Promise<TestResult> {
-  console.log(chalk.cyan(`\n📋 Testing KB type: ${kbType}`));
   const startTime = Date.now();
+  console.log(chalk.cyan(`\n📋 Testing KB type: ${kbType} (started at ${new Date().toISOString()})`));
   
   try {
     // 2a: Create a new replica
@@ -399,14 +399,16 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
       // Step 2: Run tests for each KB type
       if (options.parallel) {
         console.log(chalk.cyan('\n🚀 Running tests in parallel mode...'));
+        console.log(chalk.gray(`  Starting ${kbTypesToTest.length} tests simultaneously at ${new Date().toISOString()}`));
         
-        // Create all test tasks
+        // Create all test tasks - they start executing immediately
         const testTasks = kbTypesToTest.map(kbType => 
           runKBTypeTest(kbType, userId, testRunId, timeoutMs, options.skipChatVerification || false)
         );
         
-        // Run all tests in parallel
+        // Wait for all tests to complete
         const parallelResults = await Promise.allSettled(testTasks);
+        console.log(chalk.gray(`  All tests completed at ${new Date().toISOString()}`));
         
         // Process results
         parallelResults.forEach((result, index) => {
