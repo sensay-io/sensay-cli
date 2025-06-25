@@ -7,6 +7,8 @@ import { setupSimpleOrganizationSetupCommand } from './commands/simple-organizat
 import { setupChatCommand } from './commands/chat';
 import { setupListCommand } from './commands/list';
 import { setupConversationsCommand } from './commands/conversations';
+import { setupRetrainFailedCommand } from './commands/retrain-failed';
+import { setupHashKeyCommand } from './commands/hash-key';
 
 const program = new Command();
 
@@ -27,6 +29,8 @@ setupSimpleOrganizationSetupCommand(program);
 setupChatCommand(program);
 setupListCommand(program);
 setupConversationsCommand(program);
+setupRetrainFailedCommand(program);
+setupHashKeyCommand(program);
 
 // Interactive mode
 program
@@ -48,6 +52,7 @@ program
         { name: '💬 Chat with Replica', value: 'chat' },
         { name: '📊 List Entities', value: 'list' },
         { name: '🗣️ Query Conversations', value: 'conversations' },
+        { name: '🔄 Retrain Failed Items', value: 'retrain-failed' },
         { name: '❌ Exit', value: 'exit' }
       ]
     });
@@ -94,6 +99,20 @@ program
       case 'conversations': {
         const { conversationsCommand } = await import('./commands/conversations');
         await conversationsCommand({});
+        break;
+      }
+      case 'retrain-failed': {
+        // Ask for working folder path first
+        const { folderPath } = await inquirer.default.prompt({
+          type: 'input',
+          name: 'folderPath',
+          message: 'Working folder path for your project:',
+          default: '.',
+          validate: (input: string) => input.trim().length > 0 || 'Folder path is required'
+        });
+        
+        const { retrainFailedCommand } = await import('./commands/retrain-failed');
+        await retrainFailedCommand(folderPath.trim(), {});
         break;
       }
       case 'exit':
@@ -170,6 +189,7 @@ if (!process.argv.slice(2).length) {
           { name: '💬 Chat with Replica', value: 'chat' },
           { name: '📊 List Entities', value: 'list' },
           { name: '🗣️ Query Conversations', value: 'conversations' },
+          { name: '🔄 Retrain Failed Items', value: 'retrain-failed' },
           { name: '❌ Exit', value: 'exit' }
         ]
       });
@@ -216,6 +236,20 @@ if (!process.argv.slice(2).length) {
         case 'conversations': {
           const { conversationsCommand } = await import('./commands/conversations');
           await conversationsCommand({});
+          break;
+        }
+        case 'retrain-failed': {
+          // Ask for working folder path first
+          const { folderPath } = await inquirer.default.prompt({
+            type: 'input',
+            name: 'folderPath',
+            message: 'Working folder path for your project:',
+            default: '.',
+            validate: (input: string) => input.trim().length > 0 || 'Folder path is required'
+          });
+          
+          const { retrainFailedCommand } = await import('./commands/retrain-failed');
+          await retrainFailedCommand(folderPath.trim(), {});
           break;
         }
         case 'exit':

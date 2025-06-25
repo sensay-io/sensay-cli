@@ -60,21 +60,39 @@ export class KnowledgeBaseService {
          */
         success: boolean;
         /**
-         * The type of knowledge base entry created
+         * Array of results for each knowledge base entry created
          */
-        type: 'file' | 'text' | 'website' | 'youtube';
-        /**
-         * Array of knowledge base IDs. It will contain only one element in all cases except YouTube playlists
-         */
-        knowledgeBaseIDs: Array<number>;
-        /**
-         * The temporary URL where you should upload your file using a PUT request
-         */
-        signedURL?: string;
-        /**
-         * Ingestion errors for each failed item (currently only for youtube videos)
-         */
-        errors: Array<string>;
+        results: Array<({
+            /**
+             * The type of knowledge base entry
+             */
+            type: 'file' | 'text' | 'website' | 'youtube';
+            /**
+             * Indicates that the knowledge base entry creation has been enqueued for processing
+             */
+            enqueued: boolean;
+            /**
+             * The unique identifier for the newly created knowledge base entry.
+             */
+            knowledgeBaseID: number;
+            /**
+             * The temporary URL where you should upload your file using a PUT request
+             */
+            signedURL?: string;
+        } | {
+            /**
+             * The type of knowledge base entry
+             */
+            type: 'file' | 'text' | 'website' | 'youtube';
+            /**
+             * Indicates that the knowledge base entry creation has not been enqueued due to an error
+             */
+            enqueued: boolean;
+            /**
+             * Error message if the knowledge base entry creation failed
+             */
+            error: string;
+        })>;
     }> {
         return __request(OpenAPI, {
             method: 'POST',
@@ -113,7 +131,7 @@ export class KnowledgeBaseService {
      */
     public static getV1ReplicasKnowledgeBase(
         replicaUuid: replicaUUID_parameter,
-        status?: 'NEW' | 'FILE_UPLOADED' | 'RAW_TEXT' | 'PROCESSED_TEXT' | 'VECTOR_CREATED' | 'READY',
+        status?: 'NEW' | 'FILE_UPLOADED' | 'RAW_TEXT' | 'PROCESSED_TEXT' | 'VECTOR_CREATED' | 'READY' | 'UNPROCESSABLE',
         type?: 'file' | 'text' | 'website' | 'youtube',
         page: number = 1,
         pageSize?: number | null,
@@ -148,29 +166,7 @@ export class KnowledgeBaseService {
             /**
              * The current stage in the processing pipeline. Use this to track progress and identify any issues with processing.
              */
-            status: 'NEW' | 'FILE_UPLOADED' | 'RAW_TEXT' | 'PROCESSED_TEXT' | 'VECTOR_CREATED' | 'READY';
-            /**
-             * The original, unmodified text content that was submitted for training. May be truncated for large entries.
-             */
-            rawText?: string;
-            /**
-             * The optimized version of the text after system processing. This is what gets converted to vectors for retrieval.
-             * @deprecated
-             */
-            processedText?: string;
-            /**
-             * Generated facts related to the knowledge base entry.
-             */
-            generatedFacts?: Array<string>;
-            /**
-             * Segments of textual content that have been extracted from the original sources and split into smaller, manageable pieces.
-             */
-            generatedChunks?: Array<{
-                content?: string;
-                chunkIndex?: number;
-                chunkTokens?: number;
-                chunkChars?: number;
-            }>;
+            status: 'NEW' | 'FILE_UPLOADED' | 'RAW_TEXT' | 'PROCESSED_TEXT' | 'VECTOR_CREATED' | 'READY' | 'UNPROCESSABLE';
             /**
              * The ISO 8601 timestamp indicating when this knowledge base entry was created.
              */
@@ -370,6 +366,10 @@ export class KnowledgeBaseService {
              * Internal field. The ID of the vector entry in the database. This indicates the information has been fully processed and is ready for retrieval.
              */
             vectorEntryID?: string;
+            /**
+             * The current stage in the processing pipeline.
+             */
+            status?: 'NEW' | 'FILE_UPLOADED' | 'RAW_TEXT' | 'PROCESSED_TEXT' | 'VECTOR_CREATED' | 'READY' | 'UNPROCESSABLE';
             /**
              * Optional title for this knowledge base entry. Helps identify the content in listings.
              */
@@ -574,29 +574,7 @@ export class KnowledgeBaseService {
         /**
          * The current stage in the processing pipeline. Use this to track progress and identify any issues with processing.
          */
-        status: 'NEW' | 'FILE_UPLOADED' | 'RAW_TEXT' | 'PROCESSED_TEXT' | 'VECTOR_CREATED' | 'READY';
-        /**
-         * The original, unmodified text content that was submitted for training. May be truncated for large entries.
-         */
-        rawText?: string;
-        /**
-         * The optimized version of the text after system processing. This is what gets converted to vectors for retrieval.
-         * @deprecated
-         */
-        processedText?: string;
-        /**
-         * Generated facts related to the knowledge base entry.
-         */
-        generatedFacts?: Array<string>;
-        /**
-         * Segments of textual content that have been extracted from the original sources and split into smaller, manageable pieces.
-         */
-        generatedChunks?: Array<{
-            content?: string;
-            chunkIndex?: number;
-            chunkTokens?: number;
-            chunkChars?: number;
-        }>;
+        status: 'NEW' | 'FILE_UPLOADED' | 'RAW_TEXT' | 'PROCESSED_TEXT' | 'VECTOR_CREATED' | 'READY' | 'UNPROCESSABLE';
         /**
          * The ISO 8601 timestamp indicating when this knowledge base entry was created.
          */
@@ -721,6 +699,28 @@ export class KnowledgeBaseService {
              */
             message?: string;
         };
+        /**
+         * The original, unmodified text content that was submitted for training. May be truncated for large entries.
+         */
+        rawText?: string;
+        /**
+         * The optimized version of the text after system processing. This is what gets converted to vectors for retrieval.
+         * @deprecated
+         */
+        processedText?: string;
+        /**
+         * Generated facts related to the knowledge base entry.
+         */
+        generatedFacts?: Array<string>;
+        /**
+         * Segments of textual content that have been extracted from the original sources and split into smaller, manageable pieces.
+         */
+        generatedChunks?: Array<{
+            content?: string;
+            chunkIndex?: number;
+            chunkTokens?: number;
+            chunkChars?: number;
+        }>;
     }> {
         return __request(OpenAPI, {
             method: 'GET',
@@ -782,6 +782,10 @@ export class KnowledgeBaseService {
              * Internal field. The ID of the vector entry in the database. This indicates the information has been fully processed and is ready for retrieval.
              */
             vectorEntryID?: string;
+            /**
+             * The current stage in the processing pipeline.
+             */
+            status?: 'NEW' | 'FILE_UPLOADED' | 'RAW_TEXT' | 'PROCESSED_TEXT' | 'VECTOR_CREATED' | 'READY' | 'UNPROCESSABLE';
             /**
              * Optional title for this knowledge base entry. Helps identify the content in listings.
              */
@@ -980,29 +984,7 @@ export class KnowledgeBaseService {
         /**
          * The current stage in the processing pipeline. Use this to track progress and identify any issues with processing.
          */
-        status: 'NEW' | 'FILE_UPLOADED' | 'RAW_TEXT' | 'PROCESSED_TEXT' | 'VECTOR_CREATED' | 'READY';
-        /**
-         * The original, unmodified text content that was submitted for training. May be truncated for large entries.
-         */
-        rawText?: string;
-        /**
-         * The optimized version of the text after system processing. This is what gets converted to vectors for retrieval.
-         * @deprecated
-         */
-        processedText?: string;
-        /**
-         * Generated facts related to the knowledge base entry.
-         */
-        generatedFacts?: Array<string>;
-        /**
-         * Segments of textual content that have been extracted from the original sources and split into smaller, manageable pieces.
-         */
-        generatedChunks?: Array<{
-            content?: string;
-            chunkIndex?: number;
-            chunkTokens?: number;
-            chunkChars?: number;
-        }>;
+        status: 'NEW' | 'FILE_UPLOADED' | 'RAW_TEXT' | 'PROCESSED_TEXT' | 'VECTOR_CREATED' | 'READY' | 'UNPROCESSABLE';
         /**
          * The ISO 8601 timestamp indicating when this knowledge base entry was created.
          */
@@ -1127,6 +1109,28 @@ export class KnowledgeBaseService {
              */
             message?: string;
         };
+        /**
+         * The original, unmodified text content that was submitted for training. May be truncated for large entries.
+         */
+        rawText?: string;
+        /**
+         * The optimized version of the text after system processing. This is what gets converted to vectors for retrieval.
+         * @deprecated
+         */
+        processedText?: string;
+        /**
+         * Generated facts related to the knowledge base entry.
+         */
+        generatedFacts?: Array<string>;
+        /**
+         * Segments of textual content that have been extracted from the original sources and split into smaller, manageable pieces.
+         */
+        generatedChunks?: Array<{
+            content?: string;
+            chunkIndex?: number;
+            chunkTokens?: number;
+            chunkChars?: number;
+        }>;
     }> {
         return __request(OpenAPI, {
             method: 'GET',
@@ -1160,7 +1164,7 @@ export class KnowledgeBaseService {
      * @throws ApiError
      */
     public static getV1KnowledgeBase1(
-        status?: 'NEW' | 'FILE_UPLOADED' | 'RAW_TEXT' | 'PROCESSED_TEXT' | 'VECTOR_CREATED' | 'READY',
+        status?: 'NEW' | 'FILE_UPLOADED' | 'RAW_TEXT' | 'PROCESSED_TEXT' | 'VECTOR_CREATED' | 'READY' | 'UNPROCESSABLE',
         type?: 'file' | 'text' | 'website' | 'youtube',
         page: number = 1,
         pageSize?: number | null,
@@ -1195,29 +1199,7 @@ export class KnowledgeBaseService {
             /**
              * The current stage in the processing pipeline. Use this to track progress and identify any issues with processing.
              */
-            status: 'NEW' | 'FILE_UPLOADED' | 'RAW_TEXT' | 'PROCESSED_TEXT' | 'VECTOR_CREATED' | 'READY';
-            /**
-             * The original, unmodified text content that was submitted for training. May be truncated for large entries.
-             */
-            rawText?: string;
-            /**
-             * The optimized version of the text after system processing. This is what gets converted to vectors for retrieval.
-             * @deprecated
-             */
-            processedText?: string;
-            /**
-             * Generated facts related to the knowledge base entry.
-             */
-            generatedFacts?: Array<string>;
-            /**
-             * Segments of textual content that have been extracted from the original sources and split into smaller, manageable pieces.
-             */
-            generatedChunks?: Array<{
-                content?: string;
-                chunkIndex?: number;
-                chunkTokens?: number;
-                chunkChars?: number;
-            }>;
+            status: 'NEW' | 'FILE_UPLOADED' | 'RAW_TEXT' | 'PROCESSED_TEXT' | 'VECTOR_CREATED' | 'READY' | 'UNPROCESSABLE';
             /**
              * The ISO 8601 timestamp indicating when this knowledge base entry was created.
              */

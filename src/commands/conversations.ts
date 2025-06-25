@@ -82,7 +82,7 @@ export async function conversationsCommand(options: ConversationsOptions = {}): 
 async function listConversations(replicaId: string, options: ConversationsOptions): Promise<void> {
   console.log(chalk.blue(`📋 Conversations for Replica: ${replicaId}\n`));
   
-  const response = await ConversationsService.getV1ReplicasConversations(replicaId);
+  const response = await ConversationsService.getV1ReplicasConversations1(replicaId);
   
   if (!response.items || response.items.length === 0) {
     console.log(chalk.yellow('No conversations found.'));

@@ -9,7 +9,7 @@ import { request as __request } from '../core/request';
 export class AnalyticsService {
     /**
      * Get replica historical conversation analytics
-     * Returns cumulative conversation count for the last 30 days.
+     * Returns cumulative conversation count for the last 30 days, up to and including today.
      * @param replicaUuid
      * @param xApiVersion
      * @returns any Historical conversation analytics data
@@ -63,9 +63,9 @@ export class AnalyticsService {
          */
         source: 'discord' | 'telegram' | 'embed' | 'web' | 'telegram_autopilot';
         /**
-         * The total number of interactions (conversations) from this source.
+         * The total number of conversations from this source.
          */
-        interactions: number;
+        conversations: number;
     }>> {
         return __request(OpenAPI, {
             method: 'GET',
