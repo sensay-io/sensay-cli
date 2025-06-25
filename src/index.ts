@@ -9,6 +9,7 @@ import { setupListCommand } from './commands/list';
 import { setupConversationsCommand } from './commands/conversations';
 import { setupRetrainFailedCommand } from './commands/retrain-failed';
 import { setupHashKeyCommand } from './commands/hash-key';
+import { setupE2ECommand } from './commands/e2e';
 
 const program = new Command();
 
@@ -31,6 +32,7 @@ setupListCommand(program);
 setupConversationsCommand(program);
 setupRetrainFailedCommand(program);
 setupHashKeyCommand(program);
+setupE2ECommand(program);
 
 // Interactive mode
 program
@@ -53,6 +55,7 @@ program
         { name: '📊 List Entities', value: 'list' },
         { name: '🗣️ Query Conversations', value: 'conversations' },
         { name: '🔄 Retrain Failed Items', value: 'retrain-failed' },
+        { name: '🧪 Run E2E Tests', value: 'e2e' },
         { name: '❌ Exit', value: 'exit' }
       ]
     });
@@ -113,6 +116,11 @@ program
         
         const { retrainFailedCommand } = await import('./commands/retrain-failed');
         await retrainFailedCommand(folderPath.trim(), {});
+        break;
+      }
+      case 'e2e': {
+        const { e2eCommand } = await import('./commands/e2e');
+        await e2eCommand({});
         break;
       }
       case 'exit':
@@ -190,6 +198,7 @@ if (!process.argv.slice(2).length) {
           { name: '📊 List Entities', value: 'list' },
           { name: '🗣️ Query Conversations', value: 'conversations' },
           { name: '🔄 Retrain Failed Items', value: 'retrain-failed' },
+          { name: '🧪 Run E2E Tests', value: 'e2e' },
           { name: '❌ Exit', value: 'exit' }
         ]
       });
@@ -250,6 +259,11 @@ if (!process.argv.slice(2).length) {
           
           const { retrainFailedCommand } = await import('./commands/retrain-failed');
           await retrainFailedCommand(folderPath.trim(), {});
+          break;
+        }
+        case 'e2e': {
+          const { e2eCommand } = await import('./commands/e2e');
+          await e2eCommand({});
           break;
         }
         case 'exit':
