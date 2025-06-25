@@ -13,8 +13,8 @@ jobs:
     steps:
     - name: Install Sensay CLI
       run: |
-        # Download and run the install script
-        curl -fsSL https://raw.githubusercontent.com/sensay-io/sensay-cli/main/install.sh | bash
+        # Download and run the install script in non-interactive mode
+        curl -fsSL https://raw.githubusercontent.com/sensay-io/sensay-cli/main/install.sh | bash -s -- --non-interactive
         
         # Add to PATH for this job
         echo "$HOME/.sensay/bin" >> $GITHUB_PATH
