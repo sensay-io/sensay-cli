@@ -3,7 +3,6 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import * as path from 'path';
 import { 
-  OpenAPI, 
   ApiError, 
   UsersService, 
   ReplicasService
@@ -11,6 +10,7 @@ import {
 import { ConfigManager } from '../config/manager';
 import { FileProcessor } from '../utils/files';
 import { ProgressManager } from '../utils/progress';
+import { configureOpenAPI } from '../utils/openapi-config';
 
 interface SetupOptions {
   folderPath?: string;
@@ -45,14 +45,7 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
     }
 
     // Configure the OpenAPI client
-    OpenAPI.HEADERS = {
-      'X-API-Version': '2025-03-25',
-      'X-ORGANIZATION-SECRET': effectiveConfig.apiKey,
-    };
-    
-    if (effectiveConfig.userId) {
-      OpenAPI.HEADERS['X-USER-ID'] = effectiveConfig.userId;
-    }
+    configureOpenAPI(effectiveConfig);
 
     // Get or prompt for configuration values
     let { userName, userEmail, replicaName } = options;

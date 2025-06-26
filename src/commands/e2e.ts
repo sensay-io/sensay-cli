@@ -1,6 +1,7 @@
 import { Command } from 'commander';
-import { OpenAPI, ApiError, UsersService, ReplicasService, KnowledgeBaseService, ChatCompletionsService, TrainingService } from '../generated/index';
+import { ApiError, UsersService, ReplicasService, KnowledgeBaseService, ChatCompletionsService, TrainingService } from '../generated/index';
 import { ConfigManager } from '../config/manager';
+import { configureOpenAPI } from '../utils/openapi-config';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { v4 as uuidv4 } from 'uuid';
@@ -352,11 +353,8 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
       process.exit(1);
     }
 
-    OpenAPI.BASE = effectiveConfig.baseUrl || 'https://api.sensay.io';
-    OpenAPI.HEADERS = {
-      'X-API-Version': '2025-03-25',
-      'X-ORGANIZATION-SECRET': apiKey,
-    };
+    // Configure OpenAPI client
+    configureOpenAPI({ ...effectiveConfig, apiKey });
 
     // Parse timeout
     const timeoutMs = options.timeout ? parseInt(options.timeout) * 1000 : DEFAULT_TIMEOUT_MS;
@@ -421,7 +419,8 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
         throw new Error('Failed to create user - no ID returned');
       }
       
-      OpenAPI.HEADERS['X-USER-ID'] = userId;
+      // Update OpenAPI headers with user ID
+      configureOpenAPI({ ...effectiveConfig, apiKey, userId });
       
       console.log(chalk.green(`✅ User created: ${userId}\n`));
 

@@ -72,6 +72,7 @@ export class ConfigManager {
       organizationId: process.env.SENSAY_ORGANIZATION_ID,
       userId: process.env.SENSAY_USER_ID,
       baseUrl: process.env.SENSAY_BASE_URL,
+      vercelProtectionBypass: process.env.SENSAY_VERCEL_PROTECTION_BYPASS,
     };
   }
 

@@ -1,8 +1,9 @@
 import { Command } from 'commander';
 import inquirer from 'inquirer';
 import { ConfigManager } from '../config/manager';
-import { OpenAPI, TrainingService, ReplicasService, KnowledgeBaseService } from '../generated/index';
+import { TrainingService, ReplicasService, KnowledgeBaseService } from '../generated/index';
 import { ProgressManager } from '../utils/progress';
+import { configureOpenAPI } from '../utils/openapi-config';
 import chalk from 'chalk';
 
 interface RetrainFailedOptions {
@@ -32,15 +33,8 @@ export async function retrainFailedCommand(folderPath: string, options: RetrainF
       process.exit(1);
     }
 
-    // Configure OpenAPI headers
-    OpenAPI.HEADERS = {
-      'X-API-Version': '2025-03-25',
-      'X-ORGANIZATION-SECRET': effectiveConfig.apiKey,
-    };
-
-    if (effectiveConfig.userId) {
-      OpenAPI.HEADERS['X-USER-ID'] = effectiveConfig.userId;
-    }
+    // Configure OpenAPI client
+    configureOpenAPI(effectiveConfig);
 
     // Handle replica selection
     let replicasToProcess: Array<{ uuid: string; name: string }> = [];

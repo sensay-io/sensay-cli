@@ -16,3 +16,6 @@ jest-coverage/
 sensay.config.json
 borno.sh
 .mcp.json
+bin/sensay
+dev.sh
+run.sh
