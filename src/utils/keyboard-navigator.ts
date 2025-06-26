@@ -2,10 +2,19 @@ import readline from 'readline';
 import chalk from 'chalk';
 
 export class KeyboardNavigator {
-  private rl: readline.Interface;
+  private rl: readline.Interface | null = null;
   private keyHandlers: Map<string, () => void> = new Map();
+  private isActive: boolean = false;
 
   constructor() {
+    this.initialize();
+  }
+
+  initialize(): void {
+    if (this.rl) {
+      this.rl.close();
+    }
+    
     this.rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
@@ -16,6 +25,7 @@ export class KeyboardNavigator {
       process.stdin.setRawMode(true);
     }
     readline.emitKeypressEvents(process.stdin);
+    this.isActive = true;
   }
 
   onKey(key: string, handler: () => void): void {
@@ -23,6 +33,10 @@ export class KeyboardNavigator {
   }
 
   async waitForKey(): Promise<string> {
+    if (!this.isActive) {
+      this.initialize();
+    }
+    
     return new Promise((resolve) => {
       const onKeypress = (str: string, key: readline.Key) => {
         // Handle special keys
@@ -54,14 +68,24 @@ export class KeyboardNavigator {
     if (process.stdin.isTTY) {
       process.stdin.setRawMode(false);
     }
-    this.rl.close();
+    if (this.rl) {
+      this.rl.close();
+      this.rl = null;
+    }
+    this.isActive = false;
   }
 
-  reinitialize(): void {
-    // Re-enable raw mode after external input handling
+  pause(): void {
+    // Temporarily disable for external input
     if (process.stdin.isTTY) {
-      process.stdin.setRawMode(true);
+      process.stdin.setRawMode(false);
     }
+    this.isActive = false;
+  }
+
+  resume(): void {
+    // Re-enable after external input
+    this.initialize();
   }
 
   hideCursor(): void {

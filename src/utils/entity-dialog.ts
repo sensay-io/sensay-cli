@@ -295,7 +295,8 @@ export class EntityDialog {
     const replica = this.replicas[this.selectedIndex];
     if (!replica) return false;
 
-    // Show confirmation dialog
+    // Pause keyboard navigation for inquirer
+    this.navigator.pause();
     this.navigator.showCursor();
     this.navigator.clearScreen();
     
@@ -314,8 +315,8 @@ export class EntityDialog {
       default: false,
     });
 
-    // Re-enable raw mode after inquirer
-    this.navigator.reinitialize();
+    // Resume keyboard navigation after inquirer
+    this.navigator.resume();
     this.navigator.hideCursor();
 
     if (!confirmDelete) {
