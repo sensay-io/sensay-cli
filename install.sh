@@ -216,14 +216,14 @@ if [ "$GLOBAL_INSTALL" = "yes" ]; then
         
         # Alternative: create a symlink manually
         SENSAY_BIN="/usr/local/bin/sensay"
-        if sudo ln -sf "$INSTALL_DIR/dist/index.js" "$SENSAY_BIN" 2>/dev/null; then
+        if sudo ln -sf "$INSTALL_DIR/dist/src/index.js" "$SENSAY_BIN" 2>/dev/null; then
             # Make it executable
             sudo chmod +x "$SENSAY_BIN"
             
             # Create wrapper script
             sudo tee "$SENSAY_BIN" > /dev/null << EOF
 #!/usr/bin/env node
-require('$INSTALL_DIR/dist/index.js');
+require('$INSTALL_DIR/dist/src/index.js');
 EOF
             sudo chmod +x "$SENSAY_BIN"
             print_color "$GREEN" "✓ Global installation successful (manual symlink)"
@@ -246,7 +246,7 @@ mkdir -p "$INSTALL_DIR/bin"
 # Create main sensay executable in bin directory
 cat > "$INSTALL_DIR/bin/sensay" << EOF
 #!/usr/bin/env node
-require('$INSTALL_DIR/dist/index.js');
+require('$INSTALL_DIR/dist/src/index.js');
 EOF
 chmod +x "$INSTALL_DIR/bin/sensay"
 
@@ -254,7 +254,7 @@ chmod +x "$INSTALL_DIR/bin/sensay"
 cat > "$INSTALL_DIR/run.sh" << 'EOF'
 #!/usr/bin/env bash
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-node "$DIR/dist/index.js" "$@"
+node "$DIR/dist/src/index.js" "$@"
 EOF
 chmod +x "$INSTALL_DIR/run.sh"
 
