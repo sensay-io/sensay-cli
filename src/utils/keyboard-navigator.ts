@@ -40,6 +40,7 @@ export class KeyboardNavigator {
         if (str) {
           if (str === 'q' || str === 'Q') resolve('quit');
           else if (str === 'r' || str === 'R') resolve('refresh');
+          else if (str === 'd' || str === 'D') resolve('delete');
           else if (str === '.') resolve('details');
           else if (str === '\u001b') resolve('escape'); // ESC key
         }

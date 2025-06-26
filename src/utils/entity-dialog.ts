@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import inquirer from 'inquirer';
 import { ReplicasService, ApiError } from '../generated/index';
 import { KeyboardNavigator } from './keyboard-navigator';
 
@@ -58,6 +59,15 @@ export class EntityDialog {
             
           case 'refresh':
             await this.loadReplicas(false);
+            break;
+            
+          case 'delete':
+            if (this.mode === 'explorer' && this.replicas.length > 0) {
+              const deleted = await this.deleteReplica();
+              if (deleted) {
+                await this.loadReplicas(false);
+              }
+            }
             break;
             
           case 'quit':
@@ -137,7 +147,7 @@ export class EntityDialog {
     
     // Help text
     const helpText = this.mode === 'explorer'
-      ? '↑↓ Navigate │ Enter/. Details │ r Refresh │ q Exit'
+      ? '↑↓ Navigate │ Enter/. Details │ d Delete │ r Refresh │ q Exit'
       : '↑↓ Navigate │ Enter Select │ r Refresh │ q Exit';
     console.log(chalk.gray(helpText));
   }
@@ -173,6 +183,7 @@ export class EntityDialog {
     console.log(chalk.cyan.bold('Basic Information:'));
     console.log(chalk.white('  Name:        '), replica.name || 'N/A');
     console.log(chalk.white('  UUID:        '), replica.uuid);
+    console.log(chalk.white('  Owner ID:    '), replica.ownerID || replica.owner_uuid || 'N/A');
     console.log(chalk.white('  Status:      '), replica.status || 'active');
     console.log(chalk.white('  Visibility:  '), replica.visibility || 'private');
     
@@ -278,5 +289,65 @@ export class EntityDialog {
       name: replica.name,
       data: replica,
     };
+  }
+
+  private async deleteReplica(): Promise<boolean> {
+    const replica = this.replicas[this.selectedIndex];
+    if (!replica) return false;
+
+    // Show confirmation dialog
+    this.navigator.showCursor();
+    this.navigator.clearScreen();
+    
+    console.log(chalk.red.bold('\n⚠️  DELETE REPLICA WARNING ⚠️\n'));
+    console.log(chalk.white(`You are about to delete the replica:`));
+    console.log(chalk.yellow(`\n  Name: ${replica.name || 'Unnamed'}`));
+    console.log(chalk.yellow(`  UUID: ${replica.uuid}`));
+    console.log(chalk.yellow(`  Owner ID: ${replica.ownerID || replica.owner_uuid || 'N/A'}`));
+    
+    console.log(chalk.red.bold('\n⚠️  This action cannot be undone! ⚠️'));
+    
+    const { confirmDelete } = await inquirer.prompt({
+      type: 'confirm',
+      name: 'confirmDelete',
+      message: 'Are you sure you want to delete this replica?',
+      default: false,
+    });
+
+    this.navigator.hideCursor();
+
+    if (!confirmDelete) {
+      return false;
+    }
+
+    try {
+      this.navigator.clearScreen();
+      console.log(chalk.yellow('\n🗑️  Deleting replica...'));
+      
+      await ReplicasService.deleteV1Replicas(replica.uuid);
+      
+      console.log(chalk.green('\n✅ Replica deleted successfully!'));
+      console.log(chalk.gray('\nPress any key to continue...'));
+      
+      await this.navigator.waitForKey();
+      return true;
+    } catch (error: any) {
+      this.navigator.clearScreen();
+      console.error(chalk.red('\n❌ Failed to delete replica:'));
+      
+      if (error instanceof ApiError) {
+        console.error(chalk.red(`Error: ${error.message}`));
+        if (error.status === 403) {
+          console.error(chalk.red('You do not have permission to delete this replica.'));
+        }
+      } else {
+        console.error(chalk.red(`Error: ${error.message || error}`));
+      }
+      
+      console.log(chalk.gray('\nPress any key to continue...'));
+      await this.navigator.waitForKey();
+      
+      return false;
+    }
   }
 }
