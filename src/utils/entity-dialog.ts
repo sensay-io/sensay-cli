@@ -280,7 +280,7 @@ export class EntityDialog {
         const preview = (item.rawText || '').replace(/\n/g, ' ').substring(0, 30);
         displayName = preview || 'Text content';
       } else {
-        displayName = `${type} #${item.knowledgeBaseID}`;
+        displayName = `${type} #${item.id}`;
       }
       
       displayName = displayName.substring(0, 35);
@@ -389,7 +389,7 @@ export class EntityDialog {
 
     // Basic Information
     console.log(chalk.cyan.bold('Basic Information:'));
-    console.log(chalk.white('  ID:          '), item.knowledgeBaseID);
+    console.log(chalk.white('  ID:          '), item.id || 'N/A');
     console.log(chalk.white('  Type:        '), item.type || 'N/A');
     console.log(chalk.white('  Status:      '), item.status || 'N/A');
     
@@ -927,7 +927,7 @@ export class EntityDialog {
     console.log(chalk.white(`You are about to delete the knowledge base item:`));
     console.log(chalk.yellow(`\n  Type: ${item.type || 'Unknown'}`));
     console.log(chalk.yellow(`  Status: ${item.status || 'Unknown'}`));
-    console.log(chalk.yellow(`  ID: ${item.knowledgeBaseID}`));
+    console.log(chalk.yellow(`  ID: ${item.id}`));
     if (item.file?.filename) {
       console.log(chalk.yellow(`  File: ${item.file.filename}`));
     }
@@ -959,7 +959,7 @@ export class EntityDialog {
       console.log(chalk.yellow('\n🗑️  Deleting knowledge base item...'));
       
       await KnowledgeBaseService.deleteV1ReplicasKnowledgeBase(
-        item.knowledgeBaseID,
+        item.id,
         this.currentLevel.parentUuid!
       );
       
