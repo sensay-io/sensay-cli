@@ -36,105 +36,12 @@ setupHashKeyCommand(program);
 setupE2ECommand(program);
 setupExplorerCommand(program);
 
-// Interactive mode
+// Hidden help command (undocumented) that triggers --help
 program
-  .command('interactive')
-  .alias('i')
-  .description('Start interactive mode')
-  .action(async () => {
-    const inquirer = await import('inquirer');
-    
-    console.log(chalk.blue('🎯 Sensay CLI - Interactive Mode\n'));
-    
-    const { action } = await inquirer.default.prompt({
-      type: 'list',
-      name: 'action',
-      message: 'What would you like to do?',
-      choices: [
-        { name: '🔑 Claim API Key', value: 'claim-key' },
-        { name: '🚀 Simple Organization Setup', value: 'setup' },
-        { name: '💬 Chat with Replica', value: 'chat' },
-        { name: '📊 List Entities', value: 'list' },
-        { name: '🔍 Explorer', value: 'explorer' },
-        { name: '🗣️ Query Conversations', value: 'conversations' },
-        { name: '🔄 Retrain Failed Items', value: 'retrain-failed' },
-        { name: '🧪 Run E2E Tests', value: 'e2e' },
-        { name: '❌ Exit', value: 'exit' }
-      ]
-    });
-
-    switch (action) {
-      case 'claim-key': {
-        const { claimKeyCommand } = await import('./commands/claim-key');
-        await claimKeyCommand({});
-        break;
-      }
-      case 'setup': {
-        // Ask for working folder path first
-        const { folderPath } = await inquirer.default.prompt({
-          type: 'input',
-          name: 'folderPath',
-          message: 'Working folder path for your project:',
-          default: '.',
-          validate: (input: string) => input.trim().length > 0 || 'Folder path is required'
-        });
-        
-        const { simpleOrganizationSetupCommand } = await import('./commands/simple-organization-setup');
-        await simpleOrganizationSetupCommand(folderPath.trim());
-        break;
-      }
-      case 'chat': {
-        // Ask for working folder path first
-        const { folderPath } = await inquirer.default.prompt({
-          type: 'input',
-          name: 'folderPath',
-          message: 'Working folder path for your project:',
-          default: '.',
-          validate: (input: string) => input.trim().length > 0 || 'Folder path is required'
-        });
-        
-        const { chatCommand } = await import('./commands/chat');
-        await chatCommand(folderPath.trim());
-        break;
-      }
-      case 'list': {
-        const { listCommand } = await import('./commands/list');
-        await listCommand({});
-        break;
-      }
-      case 'conversations': {
-        const { conversationsCommand } = await import('./commands/conversations');
-        await conversationsCommand({});
-        break;
-      }
-      case 'retrain-failed': {
-        // Ask for working folder path first
-        const { folderPath } = await inquirer.default.prompt({
-          type: 'input',
-          name: 'folderPath',
-          message: 'Working folder path for your project:',
-          default: '.',
-          validate: (input: string) => input.trim().length > 0 || 'Folder path is required'
-        });
-        
-        const { retrainFailedCommand } = await import('./commands/retrain-failed');
-        await retrainFailedCommand(folderPath.trim(), {});
-        break;
-      }
-      case 'e2e': {
-        const { e2eCommand } = await import('./commands/e2e');
-        await e2eCommand({});
-        break;
-      }
-      case 'explorer': {
-        const { explorerCommand } = await import('./commands/explorer');
-        await explorerCommand();
-        break;
-      }
-      case 'exit':
-        console.log(chalk.blue('👋 Goodbye!'));
-        break;
-    }
+  .command('help', { hidden: true })
+  .description('Show help information')
+  .action(() => {
+    program.outputHelp();
   });
 
 
