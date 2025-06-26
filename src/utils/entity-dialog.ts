@@ -411,10 +411,12 @@ export class EntityDialog {
       
       await ReplicasService.deleteV1Replicas(replica.uuid);
       
+      // Brief success message that will be visible during reload
       console.log(chalk.green('\n✅ Replica deleted successfully!'));
-      console.log(chalk.gray('\nPress any key to continue...'));
       
-      await this.navigator.waitForKey();
+      // Small delay to let user see the success message
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       return true;
     } catch (error: any) {
       this.navigator.clearScreen();

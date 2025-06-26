@@ -39,9 +39,10 @@
    
    - Second test: Select "Yes" (or press 'y')
      - Should show "Deleting replica..." message
-     - Should show success message
-     - List should refresh automatically
-     - Deleted replica should no longer appear
+     - Should briefly show "✅ Replica deleted successfully!" (for ~1 second)
+     - Should automatically return to the explorer list
+     - List should refresh with the deleted replica removed
+     - No key press required after successful deletion
 
 7. Test permission error:
    - Try to delete a replica you don't own (if available)
