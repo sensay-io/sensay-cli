@@ -21,6 +21,10 @@ export class EntityDialog {
   private navigator: KeyboardNavigator;
   private viewportHeight: number = 15; // Number of items to show at once
   private scrollOffset: number = 0;
+  private currentPage: number = 1;
+  private pageSize: number = 50;
+  private totalReplicas: number = 0;
+  private isLoadingMore: boolean = false;
 
   constructor(private options: EntityDialogOptions) {
     this.mode = options.mode;
@@ -100,6 +104,13 @@ export class EntityDialog {
       if (this.selectedIndex >= this.scrollOffset + this.viewportHeight) {
         this.scrollOffset = this.selectedIndex - this.viewportHeight + 1;
       }
+      
+      // Check if we need to load more replicas
+      if (this.selectedIndex >= this.replicas.length - 5 && 
+          this.replicas.length < this.totalReplicas && 
+          !this.isLoadingMore) {
+        this.loadMoreReplicas();
+      }
     }
   }
 
@@ -139,10 +150,18 @@ export class EntityDialog {
     // Status bar
     console.log(chalk.blue.bold('─'.repeat(67)));
     
-    // Show scroll indicator
+    // Show scroll indicator and total
     if (this.replicas.length > 0) {
       const scrollInfo = `${this.selectedIndex + 1}/${this.replicas.length}`;
-      console.log(chalk.gray(`Item: ${scrollInfo}`));
+      const totalInfo = this.totalReplicas > this.replicas.length 
+        ? ` (${this.totalReplicas} total)` 
+        : '';
+      console.log(chalk.gray(`Item: ${scrollInfo}${totalInfo}`));
+      
+      // Show loading indicator if near the end
+      if (this.isLoadingMore) {
+        console.log(chalk.yellow('Loading more replicas...'));
+      }
     }
     
     // Help text
@@ -150,6 +169,11 @@ export class EntityDialog {
       ? '↑↓ Navigate │ Enter/. Details │ d Delete │ r Refresh │ q Exit'
       : '↑↓ Navigate │ Enter Select │ r Refresh │ q Exit';
     console.log(chalk.gray(helpText));
+    
+    // Show hint about more items
+    if (this.totalReplicas > this.replicas.length) {
+      console.log(chalk.cyan(`↓ Scroll down to load more (${this.replicas.length} of ${this.totalReplicas} loaded)`));
+    }
   }
 
   private renderItem(replica: any, isSelected: boolean): void {
@@ -244,8 +268,20 @@ export class EntityDialog {
         console.log(chalk.yellow('\n⏳ Loading replicas...'));
       }
       
-      const response = await ReplicasService.getV1Replicas();
+      // Reset for fresh load
+      this.currentPage = 1;
+      this.replicas = [];
+      
+      const response = await ReplicasService.getV1Replicas(
+        undefined, // ownerUuid
+        undefined, // ownerId
+        undefined, // page (deprecated)
+        this.currentPage, // pageIndex
+        this.pageSize // pageSize
+      );
+      
       this.replicas = response.items || [];
+      this.totalReplicas = response.total || this.replicas.length;
       
       // Sort by name for better UX
       this.replicas.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
@@ -276,6 +312,50 @@ export class EntityDialog {
       await this.navigator.waitForKey();
       
       this.replicas = [];
+      this.totalReplicas = 0;
+    }
+  }
+
+  private async loadMoreReplicas(): Promise<void> {
+    if (this.isLoadingMore || this.replicas.length >= this.totalReplicas) {
+      return;
+    }
+    
+    this.isLoadingMore = true;
+    
+    try {
+      this.currentPage++;
+      
+      const response = await ReplicasService.getV1Replicas(
+        undefined, // ownerUuid
+        undefined, // ownerId
+        undefined, // page (deprecated)
+        this.currentPage, // pageIndex
+        this.pageSize // pageSize
+      );
+      
+      const newReplicas = response.items || [];
+      
+      // Remove duplicates (in case of overlap)
+      const existingUuids = new Set(this.replicas.map(r => r.uuid));
+      const uniqueNewReplicas = newReplicas.filter(r => !existingUuids.has(r.uuid));
+      
+      // Merge with existing replicas
+      this.replicas = [...this.replicas, ...uniqueNewReplicas];
+      
+      // Sort all replicas
+      this.replicas.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      
+      // Update total if changed
+      this.totalReplicas = response.total || this.totalReplicas;
+      
+    } catch (error: any) {
+      // Silent fail for background loading
+      if (process.env.NODE_ENV === 'development') {
+        console.error(chalk.red('Failed to load more replicas:', error.message));
+      }
+    } finally {
+      this.isLoadingMore = false;
     }
   }
 

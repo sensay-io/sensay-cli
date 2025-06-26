@@ -1,8 +1,9 @@
-# Test Case: Explorer Delete Functionality
+# Test Case: Explorer Delete Functionality and Pagination
 
 ## Prerequisites
 - Have at least one replica in your account that you can delete
 - Have API key configured
+- Ideally have more than 50 replicas to test pagination
 
 ## Test Steps
 
@@ -46,7 +47,16 @@
    - Try to delete a replica you don't own (if available)
    - Should show permission error message
 
-8. Press 'q' to exit the explorer
+8. Test pagination (if you have > 50 replicas):
+   - Note the total count shown (e.g., "Item: 1/50 (75 total)")
+   - Scroll down near the bottom of the list
+   - Should see "↓ Scroll down to load more (50 of 75 loaded)"
+   - Continue scrolling down past item 45
+   - Should see "Loading more replicas..." briefly
+   - Additional replicas should load automatically
+   - Total loaded count should update
+
+9. Press 'q' to exit the explorer
 
 ## Expected Results
 - Owner ID is displayed in replica details
