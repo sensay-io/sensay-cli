@@ -32,7 +32,9 @@
 
 6. When prompted "Are you sure you want to delete this replica?"
    - First test: Select "No" (or press 'n')
-     - Should return to the list without deleting
+     - Should clear the screen and return to the explorer list
+     - The replica should still be in the list
+     - You should be able to continue navigating normally
    
    - Second test: Select "Yes" (or press 'y')
      - Should show "Deleting replica..." message

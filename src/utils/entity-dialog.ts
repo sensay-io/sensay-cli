@@ -314,9 +314,13 @@ export class EntityDialog {
       default: false,
     });
 
+    // Re-enable raw mode after inquirer
+    this.navigator.reinitialize();
     this.navigator.hideCursor();
 
     if (!confirmDelete) {
+      // Clear screen and return to main view
+      this.navigator.clearScreen();
       return false;
     }
 

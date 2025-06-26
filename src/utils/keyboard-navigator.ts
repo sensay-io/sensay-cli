@@ -57,6 +57,13 @@ export class KeyboardNavigator {
     this.rl.close();
   }
 
+  reinitialize(): void {
+    // Re-enable raw mode after external input handling
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode(true);
+    }
+  }
+
   hideCursor(): void {
     process.stdout.write('\x1B[?25l');
   }
