@@ -44,6 +44,7 @@ export class KeyboardNavigator {
           if (key.name === 'up') resolve('up');
           else if (key.name === 'down') resolve('down');
           else if (key.name === 'return' || key.name === 'enter') resolve('enter');
+          else if (key.name === 'escape') resolve('escape');
           else if (key.ctrl && key.name === 'c') {
             this.cleanup();
             process.exit(0);

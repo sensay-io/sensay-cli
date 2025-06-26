@@ -1,4 +1,4 @@
-# Test Case: Explorer Delete Functionality and Pagination
+# Test Case: Explorer Navigation, Delete Functionality and Pagination
 
 ⚠️ **WARNING**: This test includes a DELETE ALL operation. Only test this feature with test/disposable replicas!
 
@@ -20,20 +20,35 @@
 
 2. Navigate to a replica using arrow keys (↑/↓)
 
-3. Press Enter or '.' to view details
+3. Test navigation into Knowledge Base:
+   - Press Enter on a replica to navigate into its Knowledge Base items
+   - Should see breadcrumb change to "Replicas > [Replica Name] > Knowledge Base"
+   - Should see list of knowledge base items (files, text, websites, YouTube)
+   - Each item shows: name/preview, status, and type
+   - Press ESC to go back to replicas list
+   - Verify breadcrumb returns to "Replicas"
+
+4. Press '.' to view details (works on both replicas and knowledge base items)
    - Verify that "Owner ID" is displayed in the details view
    - Press any key to return to the list
 
-4. Select a replica you want to delete
+5. Test Knowledge Base item deletion:
+   - Navigate into a replica's Knowledge Base (Press Enter)
+   - Select a knowledge base item
+   - Press 'd' to delete
+   - Should show item details (type, status, ID, filename/URL if applicable)
+   - Test both confirming and canceling deletion
 
-5. Press 'd' to delete the replica
+6. Select a replica you want to delete
+
+7. Press 'd' to delete the replica
    - A warning screen should appear showing:
      - Replica name
      - UUID
      - Owner ID
      - Warning that action cannot be undone
 
-6. When prompted "Are you sure you want to delete this replica?"
+8. When prompted "Are you sure you want to delete this replica?"
    - First test: Select "No" (or press 'n')
      - Should clear the screen and return to the explorer list
      - The replica should still be in the list
@@ -46,11 +61,11 @@
      - List should refresh with the deleted replica removed
      - No key press required after successful deletion
 
-7. Test permission error:
+9. Test permission error:
    - Try to delete a replica you don't own (if available)
    - Should show permission error message
 
-8. Test pagination (if you have > 50 replicas):
+10. Test pagination (if you have > 50 replicas):
    - Note the total count shown (e.g., "Item: 1/50 (75 total)")
    - Scroll down near the bottom of the list
    - Should see "↓ Scroll down to load more (50 of 75 loaded)"
@@ -59,7 +74,7 @@
    - Additional replicas should load automatically
    - Total loaded count should update
 
-9. Test delete ALL (D key) - USE WITH EXTREME CAUTION:
+11. Test delete ALL (D key) - USE WITH EXTREME CAUTION:
    - Press 'D' (shift+d) to delete all replicas
    - Should show warning with total count of replicas
    - First confirmation: "Are you ABSOLUTELY SURE..." - try No first
@@ -72,7 +87,7 @@
    - Should show summary with success/failure counts
    - List should refresh showing empty state
 
-10. Press 'q' to exit the explorer
+12. Press 'q' to exit the explorer
 
 ## Expected Results
 - Owner ID is displayed in replica details
