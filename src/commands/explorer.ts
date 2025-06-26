@@ -29,13 +29,9 @@ export async function explorerCommand(folderPath?: string, options: ExplorerOpti
     // Configure the OpenAPI client
     configureOpenAPI(effectiveConfig);
 
-    console.log(chalk.blue('🔍 Sensay Explorer'));
-    console.log(chalk.gray('Navigate entities with arrow keys. Press q to exit.\n'));
-
     // Create and show the entity dialog in explorer mode
     const dialogOptions: EntityDialogOptions = {
       mode: 'explorer',
-      startLevel: 'replicas',
     };
 
     const dialog = new EntityDialog(dialogOptions);

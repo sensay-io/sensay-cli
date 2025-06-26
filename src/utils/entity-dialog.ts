@@ -1,313 +1,282 @@
-import inquirer from 'inquirer';
 import chalk from 'chalk';
-import { UsersService, ReplicasService, ApiError } from '../generated/index';
+import { ReplicasService, ApiError } from '../generated/index';
+import { KeyboardNavigator } from './keyboard-navigator';
 
 export interface EntityDialogOptions {
   mode: 'select' | 'explorer';
-  startLevel?: 'user' | 'replicas';
 }
 
 export interface SelectedEntity {
-  type: 'user' | 'replica';
+  type: 'replica';
   uuid: string;
   name: string;
   data: any;
 }
 
-interface DialogLevel {
-  type: 'user' | 'replicas';
-  items: any[];
-  selectedIndex: number;
-}
-
 export class EntityDialog {
   private mode: 'select' | 'explorer';
-  private levels: DialogLevel[] = [];
-  private currentLevelIndex: number = 0;
+  private replicas: any[] = [];
+  private selectedIndex: number = 0;
+  private navigator: KeyboardNavigator;
+  private viewportHeight: number = 15; // Number of items to show at once
+  private scrollOffset: number = 0;
 
   constructor(private options: EntityDialogOptions) {
     this.mode = options.mode;
+    this.navigator = new KeyboardNavigator();
   }
 
   async show(): Promise<SelectedEntity | null> {
-    // Initialize with the start level
-    await this.loadLevel(this.options.startLevel || 'replicas');
-
-    while (true) {
-      const currentLevel = this.levels[this.currentLevelIndex];
-      const choices = this.buildChoices(currentLevel);
-
-      // Build the prompt message
-      const promptMessage = this.buildPromptMessage();
-
-      const answer = await inquirer.prompt({
-        type: 'list',
-        name: 'selection',
-        message: promptMessage,
-        choices,
-        loop: false,
-        pageSize: 15,
-      });
-
-      const action = await this.handleSelection(answer.selection, currentLevel);
-      
-      if (action === 'exit') {
-        return null;
-      } else if (action === 'selected') {
-        return this.getSelectedEntity();
-      }
-      // Continue loop for other actions
-    }
-  }
-
-  private buildPromptMessage(): string {
-    const level = this.levels[this.currentLevelIndex];
-    let message = '';
-
-    if (this.mode === 'select') {
-      message = `Select ${level.type.slice(0, -1)}`;
-    } else {
-      message = `Explorer: ${level.type}`;
-    }
-
-    message += chalk.gray(` (↑↓: navigate, Enter: select, q: exit)`);
-
-    return message;
-  }
-
-  private buildChoices(level: DialogLevel): any[] {
-    const choices = [];
-
-    // Add navigation options
-    if (this.currentLevelIndex > 0) {
-      choices.push({
-        name: chalk.gray('← Back'),
-        value: 'back',
-      });
-    }
-
-    // Add entity choices
-    level.items.forEach((item, index) => {
-      const name = this.formatEntityName(level.type, item);
-      choices.push({
-        name,
-        value: `entity:${index}`,
-      });
-    });
-
-    // Add special actions
-    choices.push(new inquirer.Separator());
-    choices.push({
-      name: chalk.yellow('↻ Refresh'),
-      value: 'refresh',
-    });
-    choices.push({
-      name: chalk.red('✕ Exit'),
-      value: 'exit',
-    });
-
-    return choices;
-  }
-
-  private formatEntityName(type: string, item: any): string {
-    switch (type) {
-      case 'user':
-        return `${item.name || 'Current User'} ${chalk.gray(`<${item.email || 'N/A'}>`)}`;
-      case 'replicas':
-        return `${item.name} ${chalk.gray(`(${item.status || 'active'})`)}`;
-      default:
-        return item.name || item.uuid;
-    }
-  }
-
-  private async handleSelection(selection: any, currentLevel: DialogLevel): Promise<string> {
-    if (selection === 'exit') {
-      return 'exit';
-    }
-
-    if (selection === 'refresh') {
-      await this.refreshCurrentLevel();
-      return 'continue';
-    }
-
-    if (selection === 'back') {
-      this.goBack();
-      return 'continue';
-    }
-
-    if (selection.startsWith('entity:')) {
-      const index = parseInt(selection.replace('entity:', ''));
-      currentLevel.selectedIndex = index;
-      const selectedItem = currentLevel.items[index];
-
-      if (this.mode === 'explorer') {
-        // In explorer mode, ask what to do with the entity
-        const { action } = await inquirer.prompt({
-          type: 'list',
-          name: 'action',
-          message: `What would you like to do with ${selectedItem.name}?`,
-          choices: [
-            { name: 'View Details', value: 'details' },
-            { name: 'Navigate Deeper', value: 'navigate' },
-            { name: 'Back', value: 'back' },
-          ],
-        });
-
-        if (action === 'details') {
-          await this.showEntityDetails(selectedItem, currentLevel.type);
-          return 'continue';
-        } else if (action === 'navigate') {
-          const canNavigateDeeper = await this.navigateDeeper(selectedItem, currentLevel.type);
-          if (!canNavigateDeeper) {
-            console.log(chalk.yellow('\nCannot navigate deeper from this level.'));
-            await this.pause();
-          }
-          return 'continue';
-        } else {
-          return 'continue';
-        }
-      } else {
-        // In select mode, just select the entity
-        return 'selected';
-      }
-    }
-
-    return 'continue';
-  }
-
-  private async pause(): Promise<void> {
-    await inquirer.prompt({
-      type: 'input',
-      name: 'continue',
-      message: chalk.gray('Press Enter to continue...'),
-    });
-  }
-
-  private async showEntityDetails(item: any, type: string): Promise<void> {
-    console.clear();
-    console.log(chalk.blue(`\n=== ${type.slice(0, -1).toUpperCase()} DETAILS ===\n`));
-
-    switch (type) {
-      case 'user':
-        console.log(chalk.cyan('Name:'), item.name || 'N/A');
-        console.log(chalk.cyan('Email:'), item.email || 'N/A');
-        console.log(chalk.cyan('ID:'), item.id);
-        if (item.linkedAccounts && item.linkedAccounts.length > 0) {
-          console.log(chalk.cyan('\nLinked Accounts:'));
-          item.linkedAccounts.forEach((account: any) => {
-            console.log(chalk.gray(`  - ${account.accountType}: ${account.accountID}`));
-          });
-        }
-        break;
-
-      case 'replicas':
-        console.log(chalk.cyan('Name:'), item.name);
-        console.log(chalk.cyan('UUID:'), item.uuid);
-        console.log(chalk.cyan('Status:'), item.status || 'active');
-        if (item.createdAt) {
-          console.log(chalk.cyan('Created:'), new Date(item.createdAt).toLocaleString());
-        }
-        if (item.systemMessage) {
-          console.log(chalk.cyan('\nSystem Message:'));
-          console.log(chalk.gray(item.systemMessage));
-        }
-        break;
-    }
-
-    await this.pause();
-  }
-
-  private async navigateDeeper(item: any, currentType: string): Promise<boolean> {
-    switch (currentType) {
-      case 'user':
-        // Navigate to replicas
-        await this.loadLevel('replicas');
-        this.currentLevelIndex++;
-        return true;
-
-      case 'replicas':
-        // Cannot navigate deeper
-        return false;
-
-      default:
-        return false;
-    }
-  }
-
-  private goBack(): void {
-    if (this.currentLevelIndex > 0) {
-      this.levels.pop();
-      this.currentLevelIndex--;
-    }
-  }
-
-  private async refreshCurrentLevel(): Promise<void> {
-    const currentLevel = this.levels[this.currentLevelIndex];
+    this.navigator.hideCursor();
     
-    // Reload the current level
-    await this.loadLevel(currentLevel.type);
+    try {
+      // Load initial data
+      await this.loadReplicas(true);
+
+      while (true) {
+        this.render();
+        
+        const key = await this.navigator.waitForKey();
+        
+        switch (key) {
+          case 'up':
+            this.moveUp();
+            break;
+            
+          case 'down':
+            this.moveDown();
+            break;
+            
+          case 'enter':
+          case 'details':
+            if (this.mode === 'explorer') {
+              await this.showDetails();
+            } else {
+              return this.getSelectedEntity();
+            }
+            break;
+            
+          case 'refresh':
+            await this.loadReplicas(false);
+            break;
+            
+          case 'quit':
+          case 'escape':
+            return null;
+        }
+      }
+    } finally {
+      this.navigator.showCursor();
+      this.navigator.cleanup();
+    }
   }
 
-  private async loadLevel(type: 'user' | 'replicas'): Promise<void> {
+  private moveUp(): void {
+    if (this.selectedIndex > 0) {
+      this.selectedIndex--;
+      
+      // Adjust viewport if needed
+      if (this.selectedIndex < this.scrollOffset) {
+        this.scrollOffset = this.selectedIndex;
+      }
+    }
+  }
+
+  private moveDown(): void {
+    if (this.selectedIndex < this.replicas.length - 1) {
+      this.selectedIndex++;
+      
+      // Adjust viewport if needed
+      if (this.selectedIndex >= this.scrollOffset + this.viewportHeight) {
+        this.scrollOffset = this.selectedIndex - this.viewportHeight + 1;
+      }
+    }
+  }
+
+  private render(): void {
+    this.navigator.clearScreen();
+    
+    // Header
+    console.log(chalk.blue.bold('┌─────────────────────────────────────────────────────────────────┐'));
+    console.log(chalk.blue.bold('│') + chalk.white.bold(' SENSAY EXPLORER'.padEnd(65)) + chalk.blue.bold('│'));
+    console.log(chalk.blue.bold('├─────────────────────────────────────────────────────────────────┤'));
+    console.log(chalk.blue.bold('│') + chalk.gray(' Replicas'.padEnd(65)) + chalk.blue.bold('│'));
+    console.log(chalk.blue.bold('└─────────────────────────────────────────────────────────────────┘'));
+    
+    // Content area
+    if (this.replicas.length === 0) {
+      console.log();
+      console.log(chalk.yellow('  No replicas found.'));
+      console.log();
+      console.log(chalk.gray('  Create replicas using "sensay simple-organization-setup"'));
+    } else {
+      // Show items in viewport
+      const endIndex = Math.min(this.scrollOffset + this.viewportHeight, this.replicas.length);
+      
+      for (let i = this.scrollOffset; i < endIndex; i++) {
+        const replica = this.replicas[i];
+        const isSelected = i === this.selectedIndex;
+        this.renderItem(replica, isSelected);
+      }
+      
+      // Fill remaining space
+      const remainingLines = this.viewportHeight - (endIndex - this.scrollOffset);
+      for (let i = 0; i < remainingLines; i++) {
+        console.log();
+      }
+    }
+    
+    // Status bar
+    console.log(chalk.blue.bold('─'.repeat(67)));
+    
+    // Show scroll indicator
+    if (this.replicas.length > 0) {
+      const scrollInfo = `${this.selectedIndex + 1}/${this.replicas.length}`;
+      console.log(chalk.gray(`Item: ${scrollInfo}`));
+    }
+    
+    // Help text
+    const helpText = this.mode === 'explorer'
+      ? '↑↓ Navigate │ Enter/. Details │ r Refresh │ q Exit'
+      : '↑↓ Navigate │ Enter Select │ r Refresh │ q Exit';
+    console.log(chalk.gray(helpText));
+  }
+
+  private renderItem(replica: any, isSelected: boolean): void {
+    const prefix = isSelected ? chalk.cyan.bold('▶ ') : '  ';
+    const name = (replica.name || 'Unnamed Replica').substring(0, 35);
+    const status = replica.status || 'active';
+    const statusColor = status === 'active' ? chalk.green : chalk.yellow;
+    const uuid = replica.uuid.substring(0, 8);
+    
+    let line = prefix;
+    line += chalk.white(name.padEnd(36));
+    line += statusColor(`[${status}]`.padEnd(10));
+    line += chalk.gray(uuid + '...');
+    
+    console.log(line);
+  }
+
+  private async showDetails(): Promise<void> {
+    const replica = this.replicas[this.selectedIndex];
+    if (!replica) return;
+
+    this.navigator.clearScreen();
+    
+    // Header
+    console.log(chalk.blue.bold('┌─────────────────────────────────────────────────────────────────┐'));
+    console.log(chalk.blue.bold('│') + chalk.white.bold(' REPLICA DETAILS'.padEnd(65)) + chalk.blue.bold('│'));
+    console.log(chalk.blue.bold('└─────────────────────────────────────────────────────────────────┘'));
+    console.log();
+
+    // Basic Information
+    console.log(chalk.cyan.bold('Basic Information:'));
+    console.log(chalk.white('  Name:        '), replica.name || 'N/A');
+    console.log(chalk.white('  UUID:        '), replica.uuid);
+    console.log(chalk.white('  Status:      '), replica.status || 'active');
+    console.log(chalk.white('  Visibility:  '), replica.visibility || 'private');
+    
+    if (replica.slug) {
+      console.log(chalk.white('  Slug:        '), replica.slug);
+    }
+    
+    if (replica.description) {
+      console.log(chalk.white('  Description: '), replica.description);
+    }
+    
+    console.log();
+
+    // Model Information
+    if (replica.model) {
+      console.log(chalk.cyan.bold('Model Configuration:'));
+      console.log(chalk.white('  Model:       '), replica.model);
+      if (replica.temperature !== undefined) {
+        console.log(chalk.white('  Temperature: '), replica.temperature);
+      }
+      console.log();
+    }
+
+    // System Message (truncated if too long)
+    if (replica.systemMessage) {
+      console.log(chalk.cyan.bold('System Message:'));
+      const lines = replica.systemMessage.split('\n').slice(0, 5);
+      lines.forEach((line: string) => {
+        const truncated = line.length > 60 ? line.substring(0, 57) + '...' : line;
+        console.log(chalk.gray('  ' + truncated));
+      });
+      if (replica.systemMessage.split('\n').length > 5) {
+        console.log(chalk.gray('  [...]'));
+      }
+      console.log();
+    }
+
+    // Timestamps
+    if (replica.createdAt) {
+      console.log(chalk.cyan.bold('Timestamps:'));
+      console.log(chalk.white('  Created:     '), new Date(replica.createdAt).toLocaleString());
+      if (replica.updatedAt) {
+        console.log(chalk.white('  Updated:     '), new Date(replica.updatedAt).toLocaleString());
+      }
+    }
+
+    console.log();
+    console.log(chalk.blue.bold('─'.repeat(67)));
+    console.log(chalk.gray('Press any key to return...'));
+    
+    await this.navigator.waitForKey();
+  }
+
+  private async loadReplicas(showLoading: boolean): Promise<void> {
     try {
-      let items: any[] = [];
-
-      switch (type) {
-        case 'user':
-          // Get current user info
-          const userInfo = await UsersService.getV1UsersMe();
-          items = [userInfo];
-          break;
-
-        case 'replicas':
-          const replicasResponse = await ReplicasService.getV1Replicas();
-          items = replicasResponse.items || [];
-          break;
+      if (showLoading) {
+        this.navigator.clearScreen();
+        console.log(chalk.yellow('\n⏳ Loading replicas...'));
       }
-
-      // Update or create the level
-      const existingLevelIndex = this.levels.findIndex(l => l.type === type);
-      const levelData: DialogLevel = {
-        type,
-        items,
-        selectedIndex: 0,
-      };
-
-      if (existingLevelIndex >= 0) {
-        // Preserve selected index on refresh
-        const oldSelectedIndex = this.levels[existingLevelIndex].selectedIndex;
-        levelData.selectedIndex = Math.min(oldSelectedIndex, items.length - 1);
-        this.levels[existingLevelIndex] = levelData;
-      } else {
-        this.levels.push(levelData);
+      
+      const response = await ReplicasService.getV1Replicas();
+      this.replicas = response.items || [];
+      
+      // Sort by name for better UX
+      this.replicas.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      
+      // Preserve selection if possible
+      if (this.selectedIndex >= this.replicas.length) {
+        this.selectedIndex = Math.max(0, this.replicas.length - 1);
       }
-
+      
+      // Reset scroll if needed
+      if (this.scrollOffset > this.replicas.length - this.viewportHeight) {
+        this.scrollOffset = Math.max(0, this.replicas.length - this.viewportHeight);
+      }
     } catch (error: any) {
-      console.error(chalk.red(`\n❌ Failed to load ${type}:`));
+      this.navigator.clearScreen();
+      console.error(chalk.red('\n❌ Failed to load replicas:'));
+      
       if (error instanceof ApiError) {
         console.error(chalk.red(`Error: ${error.message}`));
+        if (error.status) {
+          console.error(chalk.red(`Status: ${error.status}`));
+        }
       } else {
         console.error(chalk.red(`Error: ${error.message || error}`));
       }
       
-      // Exit on error
-      process.exit(1);
+      console.log(chalk.gray('\nPress any key to exit...'));
+      await this.navigator.waitForKey();
+      
+      this.replicas = [];
     }
   }
 
   private getSelectedEntity(): SelectedEntity | null {
-    const currentLevel = this.levels[this.currentLevelIndex];
-    const selectedItem = currentLevel.items[currentLevel.selectedIndex];
-
-    if (!selectedItem) {
-      return null;
-    }
+    const replica = this.replicas[this.selectedIndex];
+    if (!replica) return null;
 
     return {
-      type: currentLevel.type.slice(0, -1) as any,
-      uuid: selectedItem.uuid,
-      name: selectedItem.name,
-      data: selectedItem,
+      type: 'replica',
+      uuid: replica.uuid,
+      name: replica.name,
+      data: replica,
     };
   }
 }
