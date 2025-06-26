@@ -89,16 +89,22 @@ async function listUserEntities(userId: string): Promise<void> {
 }
 
 async function listReplicaEntities(replicaId: string): Promise<void> {
-  console.log(chalk.cyan(`🤖 Replica: ${replicaId}\n`));
+  console.log(chalk.cyan(`🤖 Replica Details\n`));
   
   try {
     // Get replica info
     const replica = await ReplicasService.getV1Replicas1(replicaId);
-    console.log(chalk.green(`✅ Replica found: ${replica.name || 'Unnamed'}`));
-    console.log(chalk.gray(`   Description: ${replica.shortDescription || 'No description'}`));
+    console.log(chalk.green(`✅ ${replica.name || 'Unnamed'} ${replica.type ? `[${replica.type}]` : ''}`));
+    console.log(chalk.gray(`   UUID: ${replica.uuid}`));
+    console.log(chalk.gray(`   Slug: ${replica.slug}`));
     console.log(chalk.gray(`   Model: ${replica.llm?.model || 'Unknown'}`));
+    console.log(chalk.gray(`   Visibility: ${replica.private ? '🔒 Private' : '🌐 Public'}`));
+    if (replica.shortDescription) {
+      console.log(chalk.gray(`   Description: ${replica.shortDescription}`));
+    }
   } catch (error: any) {
     console.log(chalk.red(`❌ Replica not found or inaccessible`));
+    return;
   }
   
   // List training items for this replica
@@ -151,11 +157,10 @@ async function listReplicas(): Promise<void> {
           console.log(chalk.gray(`      Chat History: ${replica.chat_history_count} messages`));
         }
         
-        // Show training data for this replica
-        await listTrainingItemsForReplica(replica.uuid);
-        
         console.log(''); // Empty line between replicas
       }
+      
+      console.log(chalk.gray('💡 Tip: Use "sensay list --replica <uuid>" to see training data for a specific replica'));
     } else {
       console.log(chalk.yellow('   No replicas found'));
     }
