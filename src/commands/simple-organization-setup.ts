@@ -2,9 +2,9 @@ import { Command } from 'commander';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import * as path from 'path';
-import { 
-  ApiError, 
-  UsersService, 
+import {
+  ApiError,
+  UsersService,
   ReplicasService
 } from '../generated/index';
 import { ConfigManager } from '../config/manager';
@@ -24,7 +24,7 @@ interface SetupOptions {
 export async function simpleOrganizationSetupCommand(folderPath?: string, options: SetupOptions = {}): Promise<void> {
   const targetPath = folderPath || '.';
   const absolutePath = path.resolve(targetPath);
-  
+
   console.log(chalk.blue('🚀 Sensay Setup\n'));
   console.log(chalk.cyan(`📂 Working with folder: ${absolutePath}\n`));
 
@@ -70,37 +70,37 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
         replicaName = currentConfig.replicaName;
       } else {
         const questions = [
-        {
-          type: 'input',
-          name: 'userName',
-          message: 'User name:',
-          default: currentConfig.userName,
-          when: !currentConfig.userName,
-          validate: (input: string) => input.trim().length > 0 || 'User name is required'
-        },
-        {
-          type: 'input',
-          name: 'userEmail',
-          message: 'User email:',
-          default: currentConfig.userEmail,
-          when: !currentConfig.userEmail,
-          validate: (input: string) => {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return emailRegex.test(input) || 'Please enter a valid email address';
+          {
+            type: 'input',
+            name: 'userName',
+            message: 'User name:',
+            default: currentConfig.userName,
+            when: !currentConfig.userName,
+            validate: (input: string) => input.trim().length > 0 || 'User name is required'
+          },
+          {
+            type: 'input',
+            name: 'userEmail',
+            message: 'User email:',
+            default: currentConfig.userEmail,
+            when: !currentConfig.userEmail,
+            validate: (input: string) => {
+              const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+              return emailRegex.test(input) || 'Please enter a valid email address';
+            }
+          },
+          {
+            type: 'input',
+            name: 'replicaName',
+            message: 'Replica name:',
+            default: currentConfig.replicaName,
+            when: !currentConfig.replicaName,
+            validate: (input: string) => input.trim().length > 0 || 'Replica name is required'
           }
-        },
-        {
-          type: 'input',
-          name: 'replicaName',
-          message: 'Replica name:',
-          default: currentConfig.replicaName,
-          when: !currentConfig.replicaName,
-          validate: (input: string) => input.trim().length > 0 || 'Replica name is required'
-        }
         ];
 
         const answers = await inquirer.prompt(questions);
-        
+
         userName = userName || currentConfig.userName || answers.userName;
         userEmail = userEmail || currentConfig.userEmail || answers.userEmail;
         replicaName = replicaName || currentConfig.replicaName || answers.replicaName;
@@ -152,7 +152,7 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
       // Try to get existing replica by UUID
       try {
         replica = await ReplicasService.getV1Replicas1(currentProjectConfig.replicaId);
-        
+
         // Update the replica with current settings to ensure all are correct
         await ReplicasService.putV1Replicas(currentProjectConfig.replicaId, '2025-03-25', {
           name: replicaName!,
@@ -167,7 +167,7 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
             tools: []
           }
         });
-        
+
         replicaSpinner.succeed(`Replica updated: ${replica.name}`);
       } catch (error: any) {
         // If replica not found, clear the ID and create new one
@@ -182,7 +182,7 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
     if (!replica) {
       // Create new replica with minimal required fields and unique slug
       const uniqueSlug = `${replicaName!.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Math.random().toString(36).substr(2, 9)}`;
-      const replicaCreateResponse = await ReplicasService.postV1Replicas('2025-03-25', { 
+      const replicaCreateResponse = await ReplicasService.postV1Replicas('2025-03-25', {
         name: replicaName!,
         shortDescription: `AI replica for ${replicaName}`,
         greeting: 'Hello! How can I help you today?',
@@ -195,12 +195,12 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
           tools: []
         }
       });
-      
+
       if (replicaCreateResponse.success && replicaCreateResponse.uuid) {
         // Get the full replica details
         replica = await ReplicasService.getV1Replicas1(replicaCreateResponse.uuid);
         replicaSpinner.text = 'Updating replica settings...';
-        
+
         // Update replica with PUT to ensure all settings are correct
         await ReplicasService.putV1Replicas(replicaCreateResponse.uuid, '2025-03-25', {
           name: replicaName!,
@@ -215,7 +215,7 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
             tools: []
           }
         });
-        
+
         replicaSpinner.succeed(`Replica created and configured: ${replica.name}`);
       } else {
         throw new Error('Failed to create replica');
@@ -242,7 +242,7 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
 
     // Step 5: Process training data
     const { files, skipped } = await FileProcessor.scanTrainingFiles(targetPath);
-    
+
     // Always clear existing training data first (even if no new files to upload)
     try {
       await FileProcessor.clearExistingTrainingData(replica.uuid, options.force, options.nonInteractive);
@@ -256,7 +256,7 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
         console.log(chalk.gray(`   ${error.message}`));
       }
     }
-    
+
     if (files.length === 0) {
       console.log(chalk.yellow('⚠️  No training data found in training-data folder'));
       console.log(chalk.blue('ℹ️  Replica training data has been cleared and is ready for new content'));
@@ -266,12 +266,12 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
       // Upload training data
       const trainingSpinner = progress.createSpinner('training', 'Uploading training data...');
       let uploadResults: any[] = [];
-      
+
       try {
         uploadResults = await FileProcessor.uploadTrainingFiles(replica.uuid, files, trainingSpinner);
         const successful = uploadResults.filter(r => r.success).length;
         const failed = uploadResults.filter(r => !r.success).length;
-        
+
         if (failed > 0) {
           trainingSpinner.succeed(`Training data upload completed: ${successful} successful, ${failed} failed`);
           console.log(chalk.yellow('\n⚠️  Failed uploads:'));
@@ -281,7 +281,7 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
         } else {
           trainingSpinner.succeed(`Training data uploaded: ${files.length} files processed`);
         }
-        
+
       } catch (error: any) {
         trainingSpinner.fail(`Training data upload failed: ${error.message}`);
         // Don't throw - just warn and continue
@@ -304,12 +304,12 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
 
   } catch (error: any) {
     console.error(chalk.red('\n❌ Setup failed:'));
-    
+
     if (error instanceof ApiError) {
       // Properly typed API error from generated client
       console.error(chalk.red(`Status: ${error.status}`));
       console.error(chalk.red(`Error: ${error.message}`));
-      
+
       // Try to get additional error details from the body
       if (error.body) {
         const body = error.body as any;
@@ -328,7 +328,7 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
       // Other error
       console.error(chalk.red(`Error: ${error.message || error}`));
     }
-    
+
     if (process.env.NODE_ENV !== 'test') {
       process.exit(1);
     } else {
@@ -354,7 +354,7 @@ export function setupSimpleOrganizationSetupCommand(program: Command): void {
   cmd.configureHelp({
     formatHelp: (cmd, helper) => {
       const termWidth = helper.padWidth(cmd, helper);
-      
+
       let str = `Sensay CLI 1.0.1 - Organization Setup
 Usage: ${helper.commandUsage(cmd)}
 
@@ -364,14 +364,14 @@ folder. If no folder is specified, uses the current directory.
 
 Options:
 `;
-      
+
       // Add options
       cmd.options.forEach(option => {
         const flags = helper.optionTerm(option);
         const description = helper.optionDescription(option);
         str += `  ${flags.padEnd(termWidth)}${description}\n`;
       });
-      
+
       str += `
 Examples:
   sensay simple-organization-setup
