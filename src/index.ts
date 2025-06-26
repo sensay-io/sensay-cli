@@ -14,6 +14,9 @@ import { setupExplorerCommand } from './commands/explorer';
 
 const program = new Command();
 
+// Check if no arguments were provided
+const isInteractiveMode = process.argv.length === 2;
+
 program
   .name('sensay')
   .description('CLI tool for Sensay API operations')
@@ -43,7 +46,6 @@ program
   .action(() => {
     program.outputHelp();
   });
-
 
 // Configure help to follow wget style
 program.configureHelp({
@@ -88,114 +90,121 @@ Usage: ${helper.commandUsage(cmd)}
   }
 });
 
-program.parse();
+// Start interactive mode function
+const startInteractiveMode = async () => {
+  const inquirer = await import('inquirer');
+  
+  console.log(chalk.blue('🎯 Sensay CLI - Interactive Mode\n'));
+  
+  const { action } = await inquirer.default.prompt({
+    type: 'list',
+    name: 'action',
+    message: 'What would you like to do?',
+    choices: [
+      { name: '🔑 Claim API Key', value: 'claim-key' },
+      { name: '🚀 Simple Organization Setup', value: 'setup' },
+      { name: '💬 Chat with Replica', value: 'chat' },
+      { name: '📊 List Entities', value: 'list' },
+      { name: '🔍 Explorer', value: 'explorer' },
+      { name: '🗣️ Query Conversations', value: 'conversations' },
+      { name: '🔄 Retrain Failed Items', value: 'retrain-failed' },
+      { name: '🧪 Run E2E Tests', value: 'e2e' },
+      { name: '❌ Exit', value: 'exit' }
+    ]
+  });
 
-// Show interactive mode by default if no command is provided (unless --non-interactive is used)
-// Check if any command was matched by looking at the args after parsing
-const commandMatched = program.args.length > 0;
+  switch (action) {
+    case 'claim-key': {
+      const { claimKeyCommand } = await import('./commands/claim-key');
+      await claimKeyCommand({});
+      break;
+    }
+    case 'setup': {
+      // Ask for working folder path first
+      const { folderPath } = await inquirer.default.prompt({
+        type: 'input',
+        name: 'folderPath',
+        message: 'Working folder path for your project:',
+        default: '.',
+        validate: (input: string) => input.trim().length > 0 || 'Folder path is required'
+      });
+      
+      const { simpleOrganizationSetupCommand } = await import('./commands/simple-organization-setup');
+      await simpleOrganizationSetupCommand(folderPath.trim());
+      break;
+    }
+    case 'chat': {
+      // Ask for working folder path first
+      const { folderPath } = await inquirer.default.prompt({
+        type: 'input',
+        name: 'folderPath',
+        message: 'Working folder path for your project:',
+        default: '.',
+        validate: (input: string) => input.trim().length > 0 || 'Folder path is required'
+      });
+      
+      const { chatCommand } = await import('./commands/chat');
+      await chatCommand(folderPath.trim());
+      break;
+    }
+    case 'list': {
+      const { listCommand } = await import('./commands/list');
+      await listCommand({});
+      break;
+    }
+    case 'conversations': {
+      const { conversationsCommand } = await import('./commands/conversations');
+      await conversationsCommand({});
+      break;
+    }
+    case 'retrain-failed': {
+      // Ask for working folder path first
+      const { folderPath } = await inquirer.default.prompt({
+        type: 'input',
+        name: 'folderPath',
+        message: 'Working folder path for your project:',
+        default: '.',
+        validate: (input: string) => input.trim().length > 0 || 'Folder path is required'
+      });
+      
+      const { retrainFailedCommand } = await import('./commands/retrain-failed');
+      await retrainFailedCommand(folderPath.trim(), {});
+      break;
+    }
+    case 'e2e': {
+      const { e2eCommand } = await import('./commands/e2e');
+      await e2eCommand({});
+      break;
+    }
+    case 'explorer': {
+      const { explorerCommand } = await import('./commands/explorer');
+      await explorerCommand();
+      break;
+    }
+    case 'exit':
+      console.log(chalk.blue('👋 Goodbye!'));
+      break;
+  }
+};
 
-if (!commandMatched && !program.opts().help && !program.opts().version) {
+// If no arguments and not non-interactive, start interactive mode
+if (isInteractiveMode) {
+  const opts = program.opts();
+  // Parse to get options but don't let commander handle the no-command case
+  program.exitOverride();
+  try {
+    program.parse();
+  } catch (err) {
+    // Ignore commander errors when no command provided
+  }
+  
   const options = program.opts();
   if (options.nonInteractive) {
     program.outputHelp();
   } else {
-    // Start interactive mode by default
-    const startInteractiveMode = async () => {
-      const inquirer = await import('inquirer');
-      
-      console.log(chalk.blue('🎯 Sensay CLI - Interactive Mode\n'));
-      
-      const { action } = await inquirer.default.prompt({
-        type: 'list',
-        name: 'action',
-        message: 'What would you like to do?',
-        choices: [
-          { name: '🔑 Claim API Key', value: 'claim-key' },
-          { name: '🚀 Simple Organization Setup', value: 'setup' },
-          { name: '💬 Chat with Replica', value: 'chat' },
-          { name: '📊 List Entities', value: 'list' },
-          { name: '🔍 Explorer', value: 'explorer' },
-          { name: '🗣️ Query Conversations', value: 'conversations' },
-          { name: '🔄 Retrain Failed Items', value: 'retrain-failed' },
-          { name: '🧪 Run E2E Tests', value: 'e2e' },
-          { name: '❌ Exit', value: 'exit' }
-        ]
-      });
-
-      switch (action) {
-        case 'claim-key': {
-          const { claimKeyCommand } = await import('./commands/claim-key');
-          await claimKeyCommand({});
-          break;
-        }
-        case 'setup': {
-          // Ask for working folder path first
-          const { folderPath } = await inquirer.default.prompt({
-            type: 'input',
-            name: 'folderPath',
-            message: 'Working folder path for your project:',
-            default: '.',
-            validate: (input: string) => input.trim().length > 0 || 'Folder path is required'
-          });
-          
-          const { simpleOrganizationSetupCommand } = await import('./commands/simple-organization-setup');
-          await simpleOrganizationSetupCommand(folderPath.trim());
-          break;
-        }
-        case 'chat': {
-          // Ask for working folder path first
-          const { folderPath } = await inquirer.default.prompt({
-            type: 'input',
-            name: 'folderPath',
-            message: 'Working folder path for your project:',
-            default: '.',
-            validate: (input: string) => input.trim().length > 0 || 'Folder path is required'
-          });
-          
-          const { chatCommand } = await import('./commands/chat');
-          await chatCommand(folderPath.trim());
-          break;
-        }
-        case 'list': {
-          const { listCommand } = await import('./commands/list');
-          await listCommand({});
-          break;
-        }
-        case 'conversations': {
-          const { conversationsCommand } = await import('./commands/conversations');
-          await conversationsCommand({});
-          break;
-        }
-        case 'retrain-failed': {
-          // Ask for working folder path first
-          const { folderPath } = await inquirer.default.prompt({
-            type: 'input',
-            name: 'folderPath',
-            message: 'Working folder path for your project:',
-            default: '.',
-            validate: (input: string) => input.trim().length > 0 || 'Folder path is required'
-          });
-          
-          const { retrainFailedCommand } = await import('./commands/retrain-failed');
-          await retrainFailedCommand(folderPath.trim(), {});
-          break;
-        }
-        case 'e2e': {
-          const { e2eCommand } = await import('./commands/e2e');
-          await e2eCommand({});
-          break;
-        }
-        case 'explorer': {
-          const { explorerCommand } = await import('./commands/explorer');
-          await explorerCommand();
-          break;
-        }
-        case 'exit':
-          console.log(chalk.blue('👋 Goodbye!'));
-          break;
-      }
-    };
-    
     startInteractiveMode().catch(console.error);
   }
+} else {
+  // Normal command parsing
+  program.parse();
 }
