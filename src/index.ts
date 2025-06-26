@@ -10,6 +10,7 @@ import { setupConversationsCommand } from './commands/conversations';
 import { setupRetrainFailedCommand } from './commands/retrain-failed';
 import { setupHashKeyCommand } from './commands/hash-key';
 import { setupE2ECommand } from './commands/e2e';
+import { setupExplorerCommand } from './commands/explorer';
 
 const program = new Command();
 
@@ -33,6 +34,7 @@ setupConversationsCommand(program);
 setupRetrainFailedCommand(program);
 setupHashKeyCommand(program);
 setupE2ECommand(program);
+setupExplorerCommand(program);
 
 // Interactive mode
 program
@@ -53,6 +55,7 @@ program
         { name: '🚀 Simple Organization Setup', value: 'setup' },
         { name: '💬 Chat with Replica', value: 'chat' },
         { name: '📊 List Entities', value: 'list' },
+        { name: '🔍 Explorer', value: 'explorer' },
         { name: '🗣️ Query Conversations', value: 'conversations' },
         { name: '🔄 Retrain Failed Items', value: 'retrain-failed' },
         { name: '🧪 Run E2E Tests', value: 'e2e' },
@@ -121,6 +124,11 @@ program
       case 'e2e': {
         const { e2eCommand } = await import('./commands/e2e');
         await e2eCommand({});
+        break;
+      }
+      case 'explorer': {
+        const { explorerCommand } = await import('./commands/explorer');
+        await explorerCommand();
         break;
       }
       case 'exit':
@@ -196,6 +204,7 @@ if (!process.argv.slice(2).length) {
           { name: '🚀 Simple Organization Setup', value: 'setup' },
           { name: '💬 Chat with Replica', value: 'chat' },
           { name: '📊 List Entities', value: 'list' },
+          { name: '🔍 Explorer', value: 'explorer' },
           { name: '🗣️ Query Conversations', value: 'conversations' },
           { name: '🔄 Retrain Failed Items', value: 'retrain-failed' },
           { name: '🧪 Run E2E Tests', value: 'e2e' },
@@ -264,6 +273,11 @@ if (!process.argv.slice(2).length) {
         case 'e2e': {
           const { e2eCommand } = await import('./commands/e2e');
           await e2eCommand({});
+          break;
+        }
+        case 'explorer': {
+          const { explorerCommand } = await import('./commands/explorer');
+          await explorerCommand();
           break;
         }
         case 'exit':
