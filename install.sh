@@ -5,6 +5,55 @@
 
 set -e  # Exit on error
 
+# Parse command line arguments
+NON_INTERACTIVE=false
+INSTALL_DIR=""
+GLOBAL_INSTALL="yes"
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --non-interactive|-n)
+            NON_INTERACTIVE=true
+            shift
+            ;;
+        --install-dir|-d)
+            INSTALL_DIR="$2"
+            shift 2
+            ;;
+        --no-global)
+            GLOBAL_INSTALL="no"
+            shift
+            ;;
+        --help|-h)
+            echo "Sensay CLI Installation Script"
+            echo ""
+            echo "Usage: $0 [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  -n, --non-interactive    Run without prompts (uses defaults)"
+            echo "  -d, --install-dir DIR    Installation directory (default: ~/.sensay)"
+            echo "      --no-global          Skip global installation"
+            echo "  -h, --help              Show this help message"
+            echo ""
+            echo "Examples:"
+            echo "  # Interactive installation"
+            echo "  curl -fsSL https://raw.githubusercontent.com/sensay-io/sensay-cli/main/install.sh | bash"
+            echo ""
+            echo "  # Non-interactive with defaults"
+            echo "  curl -fsSL https://raw.githubusercontent.com/sensay-io/sensay-cli/main/install.sh | bash -s -- --non-interactive"
+            echo ""
+            echo "  # Non-interactive with custom directory"
+            echo "  curl -fsSL https://raw.githubusercontent.com/sensay-io/sensay-cli/main/install.sh | bash -s -- -n -d /opt/sensay"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+    esac
+done
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -73,27 +122,42 @@ if [ -f "package.json" ] && grep -q '"name": "sensay-cli"' package.json 2>/dev/n
     print_color "$YELLOW" "Already in sensay-cli directory. Installing from current location..."
     INSTALL_DIR=$(pwd)
 else
-    # Ask for installation directory
-    print_color "$YELLOW" "\nWhere would you like to install Sensay CLI?"
-    print_color "$YELLOW" "Default: ~/sensay-cli"
-    read -p "Installation directory: " INSTALL_DIR
-    
+    # Set default install directory if not provided
     if [ -z "$INSTALL_DIR" ]; then
-        INSTALL_DIR="$HOME/sensay-cli"
+        INSTALL_DIR="$HOME/.sensay"
     fi
     
     # Expand ~ to home directory
     INSTALL_DIR="${INSTALL_DIR/#\~/$HOME}"
     
+    # In interactive mode, ask for installation directory
+    if [ "$NON_INTERACTIVE" = false ]; then
+        print_color "$YELLOW" "\nWhere would you like to install Sensay CLI?"
+        print_color "$YELLOW" "Default: $INSTALL_DIR"
+        read -p "Installation directory: " USER_DIR
+        
+        if [ -n "$USER_DIR" ]; then
+            INSTALL_DIR="$USER_DIR"
+            # Expand ~ to home directory again
+            INSTALL_DIR="${INSTALL_DIR/#\~/$HOME}"
+        fi
+    fi
+    
     # Check if directory exists
     if [ -d "$INSTALL_DIR" ]; then
-        print_color "$YELLOW" "\nDirectory $INSTALL_DIR already exists."
-        read -p "Do you want to overwrite it? (y/N): " OVERWRITE
-        if [[ ! "$OVERWRITE" =~ ^[Yy]$ ]]; then
-            print_color "$RED" "Installation cancelled."
-            exit 1
+        if [ "$NON_INTERACTIVE" = true ]; then
+            # In non-interactive mode, always overwrite
+            print_color "$YELLOW" "Directory $INSTALL_DIR exists. Overwriting..."
+            rm -rf "$INSTALL_DIR"
+        else
+            print_color "$YELLOW" "\nDirectory $INSTALL_DIR already exists."
+            read -p "Do you want to overwrite it? (y/N): " OVERWRITE
+            if [[ ! "$OVERWRITE" =~ ^[Yy]$ ]]; then
+                print_color "$RED" "Installation cancelled."
+                exit 1
+            fi
+            rm -rf "$INSTALL_DIR"
         fi
-        rm -rf "$INSTALL_DIR"
     fi
     
     # Clone repository
@@ -127,12 +191,20 @@ if ! npm run build >/dev/null 2>&1; then
 fi
 print_color "$GREEN" "✓ Build completed"
 
-# Ask about global installation
-print_color "$YELLOW" "\nWould you like to install Sensay CLI globally?"
-print_color "$YELLOW" "This will allow you to use 'sensay' command from anywhere."
-read -p "Install globally? (Y/n): " GLOBAL_INSTALL
+# Handle global installation
+if [ "$NON_INTERACTIVE" = false ]; then
+    print_color "$YELLOW" "\nWould you like to install Sensay CLI globally?"
+    print_color "$YELLOW" "This will allow you to use 'sensay' command from anywhere."
+    read -p "Install globally? (Y/n): " USER_GLOBAL
+    
+    if [[ "$USER_GLOBAL" =~ ^[Nn]$ ]]; then
+        GLOBAL_INSTALL="no"
+    else
+        GLOBAL_INSTALL="yes"
+    fi
+fi
 
-if [[ ! "$GLOBAL_INSTALL" =~ ^[Nn]$ ]]; then
+if [ "$GLOBAL_INSTALL" = "yes" ]; then
     print_color "$YELLOW" "\nInstalling globally (may require sudo password)..."
     
     # Try npm link first (preferred method)
@@ -165,8 +237,18 @@ else
     GLOBAL_INSTALLED=false
 fi
 
-# Create convenience scripts
+# Create convenience scripts and bin directory
 print_color "$YELLOW" "\nCreating convenience scripts..."
+
+# Create bin directory for PATH-based execution
+mkdir -p "$INSTALL_DIR/bin"
+
+# Create main sensay executable in bin directory
+cat > "$INSTALL_DIR/bin/sensay" << EOF
+#!/usr/bin/env node
+require('$INSTALL_DIR/dist/index.js');
+EOF
+chmod +x "$INSTALL_DIR/bin/sensay"
 
 # Create run.sh for local execution
 cat > "$INSTALL_DIR/run.sh" << 'EOF'
@@ -201,13 +283,15 @@ if [ "$GLOBAL_INSTALLED" = true ]; then
     print_color "$YELLOW" "  sensay interactive"
 else
     print_color "$BLUE" "You can run Sensay CLI using:"
-    print_color "$YELLOW" "  cd $INSTALL_DIR"
-    print_color "$YELLOW" "  ./run.sh --help"
-    print_color "$YELLOW" "  ./run.sh claim-key"
-    print_color "$YELLOW" "  ./run.sh interactive"
+    print_color "$YELLOW" "  $INSTALL_DIR/bin/sensay --help"
+    print_color "$YELLOW" "  $INSTALL_DIR/bin/sensay claim-key"
+    print_color "$YELLOW" "  $INSTALL_DIR/bin/sensay interactive"
     echo
-    print_color "$BLUE" "Or for development mode:"
-    print_color "$YELLOW" "  ./dev.sh --help"
+    print_color "$BLUE" "To add to your PATH (for this session):"
+    print_color "$YELLOW" "  export PATH=\"\$PATH:$INSTALL_DIR/bin\""
+    echo
+    print_color "$BLUE" "To add to your PATH permanently, add this to ~/.bashrc or ~/.zshrc:"
+    print_color "$YELLOW" "  echo 'export PATH=\"\$PATH:$INSTALL_DIR/bin\"' >> ~/.bashrc"
 fi
 
 echo
@@ -219,13 +303,15 @@ print_color "$YELLOW" "3. Read the docs: sensay help-detailed"
 echo
 print_color "$GREEN" "Happy coding! 🚀"
 
-# Offer to run initial setup
-echo
-read -p "Would you like to claim your API key now? (y/N): " CLAIM_NOW
-if [[ "$CLAIM_NOW" =~ ^[Yy]$ ]]; then
-    if [ "$GLOBAL_INSTALLED" = true ]; then
-        sensay claim-key
-    else
-        "$INSTALL_DIR/run.sh" claim-key
+# Offer to run initial setup (only in interactive mode)
+if [ "$NON_INTERACTIVE" = false ]; then
+    echo
+    read -p "Would you like to claim your API key now? (y/N): " CLAIM_NOW
+    if [[ "$CLAIM_NOW" =~ ^[Yy]$ ]]; then
+        if [ "$GLOBAL_INSTALLED" = true ]; then
+            sensay claim-key
+        else
+            "$INSTALL_DIR/run.sh" claim-key
+        fi
     fi
 fi
