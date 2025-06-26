@@ -196,11 +196,15 @@ async function runKBTypeTest(
     }
 
     // 2c: Wait for training to complete
-    console.log(chalk.gray(`  Waiting for training to complete...`));
+    console.log(chalk.gray(`  Waiting for training to complete (KB ID: ${kbId})...`));
     const trainingStartTime = Date.now();
     let isTrainingComplete = false;
+    let previousStatus: string | undefined;
+    let pollCount = 0;
     
     while (Date.now() - trainingStartTime < timeoutMs) {
+      pollCount++;
+      
       // Check KB status
       const kbStatus = await KnowledgeBaseService.getV1ReplicasKnowledgeBase1(
         kbId,
@@ -208,12 +212,37 @@ async function runKBTypeTest(
         '2025-03-25'
       );
       
+      // Log status change
+      if (kbStatus.status !== previousStatus) {
+        const elapsed = Math.round((Date.now() - trainingStartTime) / 1000);
+        console.log(chalk.gray(`  [${kbType}] [${elapsed}s] Status: ${previousStatus || 'INITIAL'} → ${kbStatus.status}`));
+        previousStatus = kbStatus.status;
+        
+        // Log additional details for certain statuses
+        if (kbStatus.status === 'FILE_UPLOADED') {
+          console.log(chalk.gray(`    File upload confirmed`));
+        } else if (kbStatus.status === 'RAW_TEXT') {
+          console.log(chalk.gray(`    Text content received`));
+        } else if (kbStatus.status === 'PROCESSED_TEXT') {
+          console.log(chalk.gray(`    Text processing completed`));
+        } else if (kbStatus.status === 'VECTOR_CREATED') {
+          console.log(chalk.gray(`    Vector embeddings created`));
+        }
+      } else if (pollCount % 3 === 0) {
+        // Every 15 seconds (3 polls), show we're still waiting
+        const elapsed = Math.round((Date.now() - trainingStartTime) / 1000);
+        console.log(chalk.gray(`  [${kbType}] [${elapsed}s] Still waiting... (current status: ${kbStatus.status})`));
+      }
+      
       if (kbStatus.status === 'READY') {
         isTrainingComplete = true;
-        console.log(chalk.gray(`  Training completed in ${Math.round((Date.now() - trainingStartTime) / 1000)}s`));
+        const totalTime = Math.round((Date.now() - trainingStartTime) / 1000);
+        console.log(chalk.green(`  ✅ Training completed successfully in ${totalTime}s`));
         break;
       } else if (kbStatus.status === 'UNPROCESSABLE') {
-        throw new Error(`Training failed: ${kbStatus.error?.message || 'Unknown error'}`);
+        const errorMsg = kbStatus.error?.message || 'Unknown error';
+        console.log(chalk.red(`  ❌ Training failed with status UNPROCESSABLE: ${errorMsg}`));
+        throw new Error(`Training failed: ${errorMsg}`);
       }
       
       // Wait 5 seconds before checking again
