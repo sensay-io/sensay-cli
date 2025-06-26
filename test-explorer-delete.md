@@ -1,5 +1,7 @@
 # Test Case: Explorer Delete Functionality and Pagination
 
+⚠️ **WARNING**: This test includes a DELETE ALL operation. Only test this feature with test/disposable replicas!
+
 ## Prerequisites
 - Have at least one replica in your account that you can delete
 - Have API key configured
@@ -57,7 +59,20 @@
    - Additional replicas should load automatically
    - Total loaded count should update
 
-9. Press 'q' to exit the explorer
+9. Test delete ALL (D key) - USE WITH EXTREME CAUTION:
+   - Press 'D' (shift+d) to delete all replicas
+   - Should show warning with total count of replicas
+   - First confirmation: "Are you ABSOLUTELY SURE..." - try No first
+     - Should return to explorer without deleting
+   - Try again with 'D', select Yes for first confirmation
+   - Second confirmation: Must type "DELETE ALL" exactly
+     - Try typing wrong text first - should show validation error
+     - Type "DELETE ALL" correctly
+   - Should show progress for each deletion
+   - Should show summary with success/failure counts
+   - List should refresh showing empty state
+
+10. Press 'q' to exit the explorer
 
 ## Expected Results
 - Owner ID is displayed in replica details

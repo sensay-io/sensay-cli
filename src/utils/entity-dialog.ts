@@ -74,6 +74,15 @@ export class EntityDialog {
             }
             break;
             
+          case 'delete-all':
+            if (this.mode === 'explorer' && this.replicas.length > 0) {
+              const deletedCount = await this.deleteAllReplicas();
+              if (deletedCount > 0) {
+                await this.loadReplicas(false);
+              }
+            }
+            break;
+            
           case 'quit':
           case 'escape':
             return null;
@@ -166,7 +175,7 @@ export class EntityDialog {
     
     // Help text
     const helpText = this.mode === 'explorer'
-      ? '↑↓ Navigate │ Enter/. Details │ d Delete │ r Refresh │ q Exit'
+      ? '↑↓ Navigate │ Enter/. Details │ d Delete │ D Delete ALL │ r Refresh │ q Exit'
       : '↑↓ Navigate │ Enter Select │ r Refresh │ q Exit';
     console.log(chalk.gray(helpText));
     
@@ -435,6 +444,159 @@ export class EntityDialog {
       await this.navigator.waitForKey();
       
       return false;
+    }
+  }
+
+  private async deleteAllReplicas(): Promise<number> {
+    // Pause keyboard navigation for inquirer
+    this.navigator.pause();
+    this.navigator.showCursor();
+    this.navigator.clearScreen();
+    
+    console.log(chalk.red.bold('\n⚠️  DELETE ALL REPLICAS WARNING ⚠️\n'));
+    console.log(chalk.white(`You are about to delete ALL ${chalk.red.bold(this.totalReplicas.toString())} replicas!`));
+    
+    if (this.totalReplicas > this.replicas.length) {
+      console.log(chalk.yellow(`\nNote: ${this.totalReplicas - this.replicas.length} replicas are not loaded yet.`));
+      console.log(chalk.yellow('The operation will delete ALL replicas, including those not displayed.'));
+    }
+    
+    console.log(chalk.red.bold('\n⚠️  THIS ACTION CANNOT BE UNDONE! ⚠️'));
+    console.log(chalk.red.bold('⚠️  ALL YOUR REPLICAS WILL BE PERMANENTLY DELETED! ⚠️'));
+    
+    // First confirmation
+    const { confirmFirst } = await inquirer.prompt({
+      type: 'confirm',
+      name: 'confirmFirst',
+      message: chalk.red('Are you ABSOLUTELY SURE you want to delete ALL replicas?'),
+      default: false,
+    });
+
+    if (!confirmFirst) {
+      this.navigator.resume();
+      this.navigator.hideCursor();
+      this.navigator.clearScreen();
+      return 0;
+    }
+
+    // Second confirmation with typing
+    console.log(chalk.red.bold('\n⚠️  FINAL CONFIRMATION ⚠️'));
+    const { confirmText } = await inquirer.prompt({
+      type: 'input',
+      name: 'confirmText',
+      message: chalk.red('Type "DELETE ALL" to confirm deletion of all replicas:'),
+      validate: (input: string) => {
+        if (input === 'DELETE ALL') {
+          return true;
+        }
+        return 'You must type exactly "DELETE ALL" to confirm';
+      }
+    });
+
+    // Resume keyboard navigation after inquirer
+    this.navigator.resume();
+    this.navigator.hideCursor();
+
+    if (confirmText !== 'DELETE ALL') {
+      this.navigator.clearScreen();
+      return 0;
+    }
+
+    // Proceed with deletion
+    this.navigator.clearScreen();
+    console.log(chalk.yellow('\n🗑️  Deleting all replicas...'));
+    console.log(chalk.gray('This may take a while...\n'));
+
+    let deletedCount = 0;
+    let failedCount = 0;
+    const errors: string[] = [];
+
+    try {
+      // First, we need to load ALL replicas if we haven't already
+      if (this.replicas.length < this.totalReplicas) {
+        console.log(chalk.gray('Loading all replicas...'));
+        
+        // Load all pages
+        const allReplicas: any[] = [...this.replicas];
+        let currentPage = Math.ceil(this.replicas.length / this.pageSize) + 1;
+        
+        while (allReplicas.length < this.totalReplicas) {
+          try {
+            const response = await ReplicasService.getV1Replicas(
+              undefined,
+              undefined,
+              undefined,
+              currentPage,
+              this.pageSize
+            );
+            
+            const newReplicas = response.items || [];
+            const existingUuids = new Set(allReplicas.map(r => r.uuid));
+            const uniqueNewReplicas = newReplicas.filter(r => !existingUuids.has(r.uuid));
+            allReplicas.push(...uniqueNewReplicas);
+            
+            currentPage++;
+          } catch (error) {
+            console.error(chalk.red('Failed to load all replicas'));
+            break;
+          }
+        }
+        
+        this.replicas = allReplicas;
+      }
+
+      // Now delete each replica
+      for (let i = 0; i < this.replicas.length; i++) {
+        const replica = this.replicas[i];
+        const progress = `[${i + 1}/${this.replicas.length}]`;
+        
+        try {
+          process.stdout.write(chalk.gray(`${progress} Deleting ${replica.name || 'Unnamed'}... `));
+          await ReplicasService.deleteV1Replicas(replica.uuid);
+          deletedCount++;
+          process.stdout.write(chalk.green('✓\n'));
+        } catch (error: any) {
+          failedCount++;
+          process.stdout.write(chalk.red('✗\n'));
+          
+          if (error instanceof ApiError && error.status === 403) {
+            errors.push(`${replica.name || replica.uuid}: No permission`);
+          } else {
+            errors.push(`${replica.name || replica.uuid}: ${error.message || 'Unknown error'}`);
+          }
+        }
+      }
+
+      // Show summary
+      console.log(chalk.green(`\n✅ Deleted ${deletedCount} replicas`));
+      
+      if (failedCount > 0) {
+        console.log(chalk.red(`❌ Failed to delete ${failedCount} replicas`));
+        
+        if (errors.length > 0 && errors.length <= 5) {
+          console.log(chalk.red('\nErrors:'));
+          errors.forEach(err => console.log(chalk.red(`  - ${err}`)));
+        } else if (errors.length > 5) {
+          console.log(chalk.red(`\nShowing first 5 errors:`));
+          errors.slice(0, 5).forEach(err => console.log(chalk.red(`  - ${err}`)));
+          console.log(chalk.red(`  ... and ${errors.length - 5} more`));
+        }
+      }
+
+      // Brief delay to see the results
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      return deletedCount;
+
+    } catch (error: any) {
+      this.navigator.clearScreen();
+      console.error(chalk.red('\n❌ Failed to delete replicas:'));
+      console.error(chalk.red(`Error: ${error.message || error}`));
+      
+      console.log(chalk.gray('\nPress any key to continue...'));
+      await this.navigator.waitForKey();
+      
+      return 0;
     }
   }
 }
