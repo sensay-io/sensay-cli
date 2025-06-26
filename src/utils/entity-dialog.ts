@@ -484,12 +484,12 @@ export class EntityDialog {
     const { confirmText } = await inquirer.prompt({
       type: 'input',
       name: 'confirmText',
-      message: chalk.red('Type "DELETE ALL" to confirm deletion of all replicas:'),
+      message: chalk.red('Type "deleteeverything" to confirm deletion of all replicas:'),
       validate: (input: string) => {
-        if (input === 'DELETE ALL') {
+        if (input === 'deleteeverything') {
           return true;
         }
-        return 'You must type exactly "DELETE ALL" to confirm';
+        return 'You must type exactly "deleteeverything" to confirm';
       }
     });
 
@@ -497,7 +497,7 @@ export class EntityDialog {
     this.navigator.resume();
     this.navigator.hideCursor();
 
-    if (confirmText !== 'DELETE ALL') {
+    if (confirmText !== 'deleteeverything') {
       this.navigator.clearScreen();
       return 0;
     }

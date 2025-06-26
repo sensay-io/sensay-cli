@@ -65,9 +65,9 @@
    - First confirmation: "Are you ABSOLUTELY SURE..." - try No first
      - Should return to explorer without deleting
    - Try again with 'D', select Yes for first confirmation
-   - Second confirmation: Must type "DELETE ALL" exactly
+   - Second confirmation: Must type "deleteeverything" exactly
      - Try typing wrong text first - should show validation error
-     - Type "DELETE ALL" correctly
+     - Type "deleteeverything" correctly (all lowercase, no spaces)
    - Should show progress for each deletion
    - Should show summary with success/failure counts
    - List should refresh showing empty state
