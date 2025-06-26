@@ -4,6 +4,7 @@ export interface SensayConfig {
   organizationId?: string;
   userId?: string;
   baseUrl?: string;
+  vercelProtectionBypass?: string;
 }
 
 export interface TrainingFile {

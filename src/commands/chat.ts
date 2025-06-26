@@ -1,8 +1,9 @@
 import { Command } from 'commander';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
-import { ChatCompletionsService, ApiError, OpenAPI } from '../generated/index';
+import { ChatCompletionsService, ApiError } from '../generated/index';
 import { ConfigManager } from '../config/manager';
+import { configureOpenAPI } from '../utils/openapi-config';
 
 interface ChatOptions {
   replicaName?: string;
@@ -28,14 +29,7 @@ export async function chatCommand(folderPath?: string, options: ChatOptions = {}
     }
 
     // Configure the OpenAPI client
-    OpenAPI.HEADERS = {
-      'X-API-Version': '2025-03-25',
-      'X-ORGANIZATION-SECRET': effectiveConfig.apiKey,
-    };
-    
-    if (effectiveConfig.userId) {
-      OpenAPI.HEADERS['X-USER-ID'] = effectiveConfig.userId;
-    }
+    configureOpenAPI(effectiveConfig);
 
     // Get replica name following standard priority pattern
     let { replicaName, message } = options;

@@ -3,11 +3,11 @@ import chalk from 'chalk';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import { 
-  OpenAPI, 
   ApiError, 
   ConversationsService 
 } from '../generated/index';
 import { ConfigManager } from '../config/manager';
+import { configureOpenAPI } from '../utils/openapi-config';
 
 interface ConversationsOptions {
   replicaId?: string;
@@ -29,14 +29,7 @@ export async function conversationsCommand(options: ConversationsOptions = {}): 
     }
 
     // Configure the OpenAPI client
-    OpenAPI.HEADERS = {
-      'X-API-Version': '2025-03-25',
-      'X-ORGANIZATION-SECRET': effectiveConfig.apiKey,
-    };
-    
-    if (effectiveConfig.userId) {
-      OpenAPI.HEADERS['X-USER-ID'] = effectiveConfig.userId;
-    }
+    configureOpenAPI(effectiveConfig);
 
     // Get replica ID from options or config
     let replicaId = options.replicaId;
