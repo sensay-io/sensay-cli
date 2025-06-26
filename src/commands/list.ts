@@ -151,11 +151,10 @@ async function listReplicas(): Promise<void> {
           console.log(chalk.gray(`      Chat History: ${replica.chat_history_count} messages`));
         }
         
-        // Show training data for this replica
-        await listTrainingItemsForReplica(replica.uuid);
-        
         console.log(''); // Empty line between replicas
       }
+      
+      console.log(chalk.gray('💡 Tip: Use "sensay list --replica <uuid>" to see training data for a specific replica'));
     } else {
       console.log(chalk.yellow('   No replicas found'));
     }
