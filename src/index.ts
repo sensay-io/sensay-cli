@@ -91,7 +91,10 @@ Usage: ${helper.commandUsage(cmd)}
 program.parse();
 
 // Show interactive mode by default if no command is provided (unless --non-interactive is used)
-if (!process.argv.slice(2).length) {
+const args = program.args;
+const hasCommand = args.length > 0 || program.commands.some(cmd => process.argv.includes(cmd.name()));
+
+if (!hasCommand) {
   const options = program.opts();
   if (options.nonInteractive) {
     program.outputHelp();
