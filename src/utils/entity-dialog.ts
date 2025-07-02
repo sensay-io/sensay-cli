@@ -197,6 +197,9 @@ export class EntityDialog {
         console.log(chalk.gray('  Add training data to this replica to see items here.'));
       }
     } else {
+      // Show column headers
+      this.renderColumnHeaders();
+      
       // Show items in viewport
       const endIndex = Math.min(this.scrollOffset + this.viewportHeight, this.replicas.length);
       
@@ -206,9 +209,9 @@ export class EntityDialog {
         this.renderItem(replica, isSelected);
       }
       
-      // Fill remaining space
-      const remainingLines = this.viewportHeight - (endIndex - this.scrollOffset);
-      for (let i = 0; i < remainingLines; i++) {
+      // Fill remaining space (account for headers)
+      const remainingLines = this.viewportHeight - (endIndex - this.scrollOffset) - 2;
+      for (let i = 0; i < Math.max(0, remainingLines); i++) {
         console.log();
       }
     }
@@ -253,15 +256,21 @@ export class EntityDialog {
     const prefix = isSelected ? chalk.cyan.bold('▶ ') : '  ';
     
     if (this.currentLevel.type === 'replicas') {
-      const name = (item.name || 'Unnamed Replica').substring(0, 35);
+      const name = (item.name || 'Unnamed Replica').substring(0, 28);
       const status = item.status || 'active';
       const statusColor = status === 'active' ? chalk.green : chalk.yellow;
-      const uuid = item.uuid.substring(0, 8);
+      const uuid = item.uuid.substring(0, 6);
+      
+      // Format timestamps
+      const createdAt = item.createdAt ? this.formatTimestamp(item.createdAt) : '----';
+      const updatedAt = item.updatedAt ? this.formatTimestamp(item.updatedAt) : '----';
       
       let line = prefix;
-      line += chalk.white(name.padEnd(36));
-      line += statusColor(`[${status}]`.padEnd(10));
-      line += chalk.gray(uuid + '...');
+      line += chalk.white(name.padEnd(29));
+      line += statusColor(`[${status}]`.padEnd(8));
+      line += chalk.gray(`${uuid} `);
+      line += chalk.cyan(`${createdAt} `);
+      line += chalk.yellow(`${updatedAt}`);
       
       console.log(line);
     } else if (this.currentLevel.type === 'knowledge-base') {
@@ -273,17 +282,17 @@ export class EntityDialog {
       if (type === 'file' && item.file?.filename) {
         displayName = item.file.filename;
       } else if (type === 'website' && item.website?.url) {
-        displayName = item.website.url.substring(0, 30);
+        displayName = item.website.url.substring(0, 22);
       } else if (type === 'youtube' && item.youtube?.title) {
         displayName = item.youtube.title;
       } else if (type === 'text') {
-        const preview = (item.rawText || '').replace(/\n/g, ' ').substring(0, 30);
+        const preview = (item.rawText || '').replace(/\n/g, ' ').substring(0, 22);
         displayName = preview || 'Text content';
       } else {
         displayName = `${type} #${item.id}`;
       }
       
-      displayName = displayName.substring(0, 35);
+      displayName = displayName.substring(0, 22);
       
       // Status color coding
       let statusColor = chalk.gray;
@@ -291,12 +300,54 @@ export class EntityDialog {
       else if (status === 'PROCESSING' || status === 'FILE_UPLOADED' || status === 'RAW_TEXT') statusColor = chalk.yellow;
       else if (status === 'UNPROCESSABLE' || status.startsWith('ERR')) statusColor = chalk.red;
       
+      // Format timestamps
+      const createdAt = item.createdAt ? this.formatTimestamp(item.createdAt) : '----';
+      const updatedAt = item.updatedAt ? this.formatTimestamp(item.updatedAt) : '----';
+      
       let line = prefix;
-      line += chalk.white(displayName.padEnd(36));
-      line += statusColor(`[${status}]`.padEnd(15));
-      line += chalk.gray(type);
+      line += chalk.white(displayName.padEnd(23));
+      line += statusColor(`[${status}]`.padEnd(12));
+      line += chalk.gray(`${type.padEnd(7)} `);
+      line += chalk.cyan(`${createdAt} `);
+      line += chalk.yellow(`${updatedAt}`);
       
       console.log(line);
+    }
+  }
+
+  private renderColumnHeaders(): void {
+    if (this.currentLevel.type === 'replicas') {
+      let header = '  ';
+      header += chalk.gray('Name'.padEnd(29));
+      header += chalk.gray('Status'.padEnd(8));
+      header += chalk.gray('UUID'.padEnd(7));
+      header += chalk.gray('Created'.padEnd(12));
+      header += chalk.gray('Updated');
+      console.log(header);
+      console.log(chalk.gray('  ' + '─'.repeat(63)));
+    } else if (this.currentLevel.type === 'knowledge-base') {
+      let header = '  ';
+      header += chalk.gray('Name'.padEnd(23));
+      header += chalk.gray('Status'.padEnd(12));
+      header += chalk.gray('Type'.padEnd(8));
+      header += chalk.gray('Created'.padEnd(12));
+      header += chalk.gray('Updated');
+      console.log(header);
+      console.log(chalk.gray('  ' + '─'.repeat(63)));
+    }
+  }
+
+  private formatTimestamp(timestamp: string): string {
+    try {
+      const date = new Date(timestamp);
+      // Format as MM/DD HH:MM (compact format)
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${month}/${day} ${hours}:${minutes}`;
+    } catch {
+      return '----';
     }
   }
 
@@ -668,12 +719,12 @@ export class EntityDialog {
     const { confirmText } = await inquirer.prompt({
       type: 'input',
       name: 'confirmText',
-      message: chalk.red('Type "deleteeverything" to confirm deletion of all replicas:'),
+      message: chalk.red('Type "nuke" to confirm deletion of all replicas:'),
       validate: (input: string) => {
-        if (input === 'deleteeverything') {
+        if (input === 'nuke') {
           return true;
         }
-        return 'You must type exactly "deleteeverything" to confirm';
+        return 'You must type exactly "nuke" to confirm';
       }
     });
 
@@ -681,7 +732,7 @@ export class EntityDialog {
     this.navigator.resume();
     this.navigator.hideCursor();
 
-    if (confirmText !== 'deleteeverything') {
+    if (confirmText !== 'nuke') {
       this.navigator.clearScreen();
       return 0;
     }
