@@ -1,7 +1,7 @@
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import chalk from 'chalk';
-import { TrainingService } from '../generated/index';
+import { TrainingService, KnowledgeBaseService } from '../generated/index';
 import ora from 'ora';
 import inquirer from 'inquirer';
 
@@ -261,20 +261,29 @@ export class FileProcessor {
       console.log(chalk.gray(`   Uploading file: ${file.relativePath}...`));
     }
     
-    // Step 1: Get signed URL for file upload
-    const signedUrlResponse = await TrainingService.getV1ReplicasTrainingFilesUpload(
+    // Step 1: Create knowledge base entry for file upload
+    const fileKbResponse = await KnowledgeBaseService.postV1ReplicasKnowledgeBase(
       replicaUuid,
-      path.basename(file.path)
+      '2025-03-25',
+      {
+        filename: path.basename(file.path),
+        autoRefresh: false
+      }
     );
     
-    if (!signedUrlResponse.success || !signedUrlResponse.signedURL) {
-      throw new Error('Failed to get signed upload URL');
+    const fileResult = fileKbResponse.results[0];
+    if ('error' in fileResult) {
+      throw new Error(`Failed to create file knowledge base: ${fileResult.error}`);
+    }
+    
+    if (!fileResult.signedURL) {
+      throw new Error('Failed to get signed URL for file upload');
     }
     
     // Step 2: Upload file to signed URL
     const fileBuffer = await fs.readFile(file.path);
     
-    const uploadResponse = await fetch(signedUrlResponse.signedURL, {
+    const uploadResponse = await fetch(fileResult.signedURL, {
       method: 'PUT',
       body: fileBuffer,
       headers: {
@@ -286,11 +295,7 @@ export class FileProcessor {
       throw new Error(`Upload failed with status: ${uploadResponse.status}`);
     }
     
-    if (!signedUrlResponse.knowledgeBaseID) {
-      throw new Error('No knowledge base ID returned from upload');
-    }
-    
-    return signedUrlResponse.knowledgeBaseID;
+    return fileResult.knowledgeBaseID!;
   }
 
   static async clearExistingTrainingData(replicaUuid: string, force: boolean = false, nonInteractive: boolean = false): Promise<void> {

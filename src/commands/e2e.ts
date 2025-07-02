@@ -140,33 +140,7 @@ async function runKBTypeTest(
         console.log(chalk.gray(`  Training with file: ${testFileName}`));
         
         try {
-          // Get signed URL for file upload
-          const signedUrlResponse = await TrainingService.getV1ReplicasTrainingFilesUpload(
-            replicaUuid,
-            testFileName
-          );
-          
-          if (!signedUrlResponse.signedURL) {
-            throw new Error('Failed to get signed URL for file upload');
-          }
-          
-          console.log(chalk.gray(`  Uploading file to cloud storage...`));
-          
-          // Upload file to signed URL
-          const fileBuffer = await fs.readFile(testFilePath);
-          const uploadResponse = await fetch(signedUrlResponse.signedURL, {
-            method: 'PUT',
-            body: fileBuffer,
-            headers: {
-              'Content-Type': 'text/plain'
-            }
-          });
-          
-          if (!uploadResponse.ok) {
-            throw new Error(`File upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
-          }
-          
-          // Create knowledge base entry for the uploaded file
+          // Create knowledge base entry for file upload
           const fileKbResponse = await KnowledgeBaseService.postV1ReplicasKnowledgeBase(
             replicaUuid,
             '2025-03-25',
@@ -180,6 +154,27 @@ async function runKBTypeTest(
           if ('error' in fileResult) {
             throw new Error(`Failed to create file knowledge base: ${fileResult.error}`);
           }
+          
+          if (!fileResult.signedURL) {
+            throw new Error('Failed to get signed URL for file upload');
+          }
+          
+          console.log(chalk.gray(`  Uploading file to cloud storage...`));
+          
+          // Upload file to signed URL
+          const fileBuffer = await fs.readFile(testFilePath);
+          const uploadResponse = await fetch(fileResult.signedURL, {
+            method: 'PUT',
+            body: fileBuffer,
+            headers: {
+              'Content-Type': 'text/plain'
+            }
+          });
+          
+          if (!uploadResponse.ok) {
+            throw new Error(`File upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
+          }
+          
           kbId = fileResult.knowledgeBaseID!;
           
           // Clean up temp file
