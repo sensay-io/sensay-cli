@@ -12,6 +12,8 @@ This is a TypeScript CLI tool for managing Sensay API operations including.
 - The tool uses by default the current directory as the `project` path. It can be overridden with an Option.
 - The project uses the same name of entities and their properties used by the Sensay API.
 - All Commands and Options should be documented in the Help. Help is accessible via the Option `--help` or `-h`. The style of the help should be the same as the style returned by `wget --help`
+- Interactive mode is the default behavior when running `sensay` without any command
+- The `help` command exists but is hidden/undocumented and triggers the same output as `--help`
 
 ## Options
 
