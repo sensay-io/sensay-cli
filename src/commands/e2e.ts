@@ -36,7 +36,8 @@ async function runKBTypeTest(
   userId: string, 
   testRunId: string, 
   timeoutMs: number,
-  skipChatVerification: boolean
+  skipChatVerification: boolean,
+  sentryEnabled: boolean = false
 ): Promise<TestResult> {
   const startTime = Date.now();
   let trainingStartTime = 0;
@@ -223,7 +224,7 @@ async function runKBTypeTest(
         console.log(chalk.gray(`  [${kbType}] [${elapsed}s] Status: ${previousStatus || 'INITIAL'} → ${kbStatus.status}`));
         
         // Send Sentry event for status change (single step)
-        if (previousStatus) {
+        if (sentryEnabled && previousStatus) {
           Sentry.metrics.increment('e2e_training_single_step', 1, {
             tags: {
               [`type_${kbType}`]: 'true',
@@ -266,27 +267,29 @@ async function runKBTypeTest(
         console.log(chalk.green(`  ✅ Training completed successfully in ${totalTime}s`));
         
         // Send Sentry event for complete training
-        Sentry.metrics.increment('e2e_training_complete', 1, {
-          tags: {
-            [`type_${kbType}`]: 'true',
-            success: 'true'
-          }
-        });
-        
-        Sentry.metrics.timing('e2e_training_complete', trainingDuration, 'millisecond', {
-          tags: {
-            [`type_${kbType}`]: 'true',
-            success: 'true'
-          }
-        });
-        
-        // Also track with 'training_duration_ms' key for clarity
-        Sentry.metrics.timing('e2e_training_complete.training_duration_ms', trainingDuration, 'millisecond', {
-          tags: {
-            [`type_${kbType}`]: 'true',
-            success: 'true'
-          }
-        });
+        if (sentryEnabled) {
+          Sentry.metrics.increment('e2e_training_complete', 1, {
+            tags: {
+              [`type_${kbType}`]: 'true',
+              success: 'true'
+            }
+          });
+          
+          Sentry.metrics.timing('e2e_training_complete', trainingDuration, 'millisecond', {
+            tags: {
+              [`type_${kbType}`]: 'true',
+              success: 'true'
+            }
+          });
+          
+          // Also track with 'training_duration_ms' key for clarity
+          Sentry.metrics.timing('e2e_training_complete.training_duration_ms', trainingDuration, 'millisecond', {
+            tags: {
+              [`type_${kbType}`]: 'true',
+              success: 'true'
+            }
+          });
+        }
         
         break;
       } else if (kbStatus.status === 'UNPROCESSABLE') {
@@ -294,6 +297,35 @@ async function runKBTypeTest(
         console.log(chalk.red(`  ❌ Training failed with status UNPROCESSABLE: ${errorMsg}`));
         
         // Send Sentry event for failed training
+        if (sentryEnabled) {
+          const currentTime = Date.now();
+          const trainingDuration = currentTime - trainingStartTime;
+          
+          Sentry.metrics.increment('e2e_training_complete', 1, {
+            tags: {
+              [`type_${kbType}`]: 'true',
+              success: 'false'
+            }
+          });
+          
+          Sentry.metrics.timing('e2e_training_complete', trainingDuration, 'millisecond', {
+            tags: {
+              [`type_${kbType}`]: 'true',
+              success: 'false'
+            }
+          });
+        }
+        
+        throw new Error(`Training failed: ${errorMsg}`);
+      }
+      
+      // Wait 5 seconds before checking again
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+    
+    if (!isTrainingComplete) {
+      // Send Sentry event for timeout
+      if (sentryEnabled) {
         const currentTime = Date.now();
         const trainingDuration = currentTime - trainingStartTime;
         
@@ -310,32 +342,7 @@ async function runKBTypeTest(
             success: 'false'
           }
         });
-        
-        throw new Error(`Training failed: ${errorMsg}`);
       }
-      
-      // Wait 5 seconds before checking again
-      await new Promise(resolve => setTimeout(resolve, 5000));
-    }
-    
-    if (!isTrainingComplete) {
-      // Send Sentry event for timeout
-      const currentTime = Date.now();
-      const trainingDuration = currentTime - trainingStartTime;
-      
-      Sentry.metrics.increment('e2e_training_complete', 1, {
-        tags: {
-          [`type_${kbType}`]: 'true',
-          success: 'false'
-        }
-      });
-      
-      Sentry.metrics.timing('e2e_training_complete', trainingDuration, 'millisecond', {
-        tags: {
-          [`type_${kbType}`]: 'true',
-          success: 'false'
-        }
-      });
       
       throw new Error(`Training timeout after ${timeoutMs / 1000}s`);
     }
@@ -346,12 +353,14 @@ async function runKBTypeTest(
       const totalDuration = Date.now() - startTime;
       
       // Add total_duration_ms to the already sent training complete event
-      Sentry.metrics.timing('e2e_training_complete.total_duration_ms', totalDuration, 'millisecond', {
-        tags: {
-          [`type_${kbType}`]: 'true',
-          success: 'true'
-        }
-      });
+      if (sentryEnabled) {
+        Sentry.metrics.timing('e2e_training_complete.total_duration_ms', totalDuration, 'millisecond', {
+          tags: {
+            [`type_${kbType}`]: 'true',
+            success: 'true'
+          }
+        });
+      }
       
       return {
         kbType,
@@ -420,12 +429,14 @@ async function runKBTypeTest(
       const totalDuration = Date.now() - startTime;
       
       // Add total_duration_ms to the already sent training complete event
-      Sentry.metrics.timing('e2e_training_complete.total_duration_ms', totalDuration, 'millisecond', {
-        tags: {
-          [`type_${kbType}`]: 'true',
-          success: 'true'
-        }
-      });
+      if (sentryEnabled) {
+        Sentry.metrics.timing('e2e_training_complete.total_duration_ms', totalDuration, 'millisecond', {
+          tags: {
+            [`type_${kbType}`]: 'true',
+            success: 'true'
+          }
+        });
+      }
       
       return {
         kbType,
@@ -436,12 +447,14 @@ async function runKBTypeTest(
       const totalDuration = Date.now() - startTime;
       
       // Add total_duration_ms for failed chat verification
-      Sentry.metrics.timing('e2e_training_complete.total_duration_ms', totalDuration, 'millisecond', {
-        tags: {
-          [`type_${kbType}`]: 'true',
-          success: 'false'
-        }
-      });
+      if (sentryEnabled) {
+        Sentry.metrics.timing('e2e_training_complete.total_duration_ms', totalDuration, 'millisecond', {
+          tags: {
+            [`type_${kbType}`]: 'true',
+            success: 'false'
+          }
+        });
+      }
       
       return {
         kbType,
@@ -465,8 +478,9 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
     // Configure Sentry if DSN is provided
     const sentryDsn = options.sentryDsn || effectiveConfig.sentryDsn;
     const sentryEnvironment = options.sentryEnvironment || effectiveConfig.sentryEnvironment || 'unspecified';
+    const sentryEnabled = !!sentryDsn;
     
-    if (sentryDsn) {
+    if (sentryEnabled) {
       Sentry.init({
         dsn: sentryDsn,
         environment: sentryEnvironment,
@@ -560,7 +574,7 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
         
         // Create all test tasks - they start executing immediately
         const testTasks = kbTypesToTest.map(kbType => 
-          runKBTypeTest(kbType, userId, testRunId, timeoutMs, options.skipChatVerification || false)
+          runKBTypeTest(kbType, userId, testRunId, timeoutMs, options.skipChatVerification || false, sentryEnabled)
         );
         
         // Wait for all tests to complete
@@ -586,7 +600,7 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
         // Sequential mode
         for (const kbType of kbTypesToTest) {
           try {
-            const result = await runKBTypeTest(kbType, userId, testRunId, timeoutMs, options.skipChatVerification || false);
+            const result = await runKBTypeTest(kbType, userId, testRunId, timeoutMs, options.skipChatVerification || false, sentryEnabled);
             results.push(result);
           } catch (error: any) {
             results.push({
