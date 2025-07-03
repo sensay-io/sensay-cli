@@ -5,6 +5,8 @@ export interface SensayConfig {
   userId?: string;
   baseUrl?: string;
   vercelProtectionBypass?: string;
+  sentryDsn?: string;
+  sentryEnvironment?: string;
 }
 
 export interface TrainingFile {
