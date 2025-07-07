@@ -225,17 +225,16 @@ async function runKBTypeTest(
         
         // Send Sentry event for status change (single step)
         if (sentryEnabled && previousStatus) {
-          Sentry.metrics.increment('e2e_training_single_step', 1, {
-            tags: {
-              [`type_${kbType}`]: 'true',
-              [`step_${previousStatus}`]: 'true'
-            }
-          });
-          
-          Sentry.metrics.timing('e2e_training_single_step', stepDuration, 'millisecond', {
-            tags: {
-              [`type_${kbType}`]: 'true',
-              [`step_${previousStatus}`]: 'true'
+          Sentry.addBreadcrumb({
+            message: 'E2E Training Step',
+            category: 'e2e_training_single_step',
+            level: 'info',
+            data: {
+              kb_type: kbType,
+              from_status: previousStatus,
+              to_status: kbStatus.status,
+              step_duration_ms: stepDuration,
+              elapsed_time_ms: elapsed * 1000
             }
           });
         }
@@ -268,25 +267,15 @@ async function runKBTypeTest(
         
         // Send Sentry event for complete training
         if (sentryEnabled) {
-          Sentry.metrics.increment('e2e_training_complete', 1, {
+          Sentry.captureMessage('E2E Training Complete', {
+            level: 'info',
             tags: {
-              [`type_${kbType}`]: 'true',
+              kb_type: kbType,
               success: 'true'
-            }
-          });
-          
-          Sentry.metrics.timing('e2e_training_complete', trainingDuration, 'millisecond', {
-            tags: {
-              [`type_${kbType}`]: 'true',
-              success: 'true'
-            }
-          });
-          
-          // Also track with 'training_duration_ms' key for clarity
-          Sentry.metrics.timing('e2e_training_complete.training_duration_ms', trainingDuration, 'millisecond', {
-            tags: {
-              [`type_${kbType}`]: 'true',
-              success: 'true'
+            },
+            extra: {
+              training_duration_ms: trainingDuration,
+              training_duration_seconds: Math.round(trainingDuration / 1000)
             }
           });
         }
@@ -301,17 +290,17 @@ async function runKBTypeTest(
           const currentTime = Date.now();
           const trainingDuration = currentTime - trainingStartTime;
           
-          Sentry.metrics.increment('e2e_training_complete', 1, {
+          Sentry.captureMessage('E2E Training Failed', {
+            level: 'error',
             tags: {
-              [`type_${kbType}`]: 'true',
-              success: 'false'
-            }
-          });
-          
-          Sentry.metrics.timing('e2e_training_complete', trainingDuration, 'millisecond', {
-            tags: {
-              [`type_${kbType}`]: 'true',
-              success: 'false'
+              kb_type: kbType,
+              success: 'false',
+              failure_reason: 'unprocessable'
+            },
+            extra: {
+              training_duration_ms: trainingDuration,
+              training_duration_seconds: Math.round(trainingDuration / 1000),
+              error_message: errorMsg
             }
           });
         }
@@ -329,17 +318,17 @@ async function runKBTypeTest(
         const currentTime = Date.now();
         const trainingDuration = currentTime - trainingStartTime;
         
-        Sentry.metrics.increment('e2e_training_complete', 1, {
+        Sentry.captureMessage('E2E Training Timeout', {
+          level: 'error',
           tags: {
-            [`type_${kbType}`]: 'true',
-            success: 'false'
-          }
-        });
-        
-        Sentry.metrics.timing('e2e_training_complete', trainingDuration, 'millisecond', {
-          tags: {
-            [`type_${kbType}`]: 'true',
-            success: 'false'
+            kb_type: kbType,
+            success: 'false',
+            failure_reason: 'timeout'
+          },
+          extra: {
+            training_duration_ms: trainingDuration,
+            training_duration_seconds: Math.round(trainingDuration / 1000),
+            timeout_seconds: timeoutMs / 1000
           }
         });
       }
@@ -352,12 +341,18 @@ async function runKBTypeTest(
       console.log(chalk.gray(`  Skipping chat verification as requested`));
       const totalDuration = Date.now() - startTime;
       
-      // Add total_duration_ms to the already sent training complete event
+      // Add total_duration_ms info to Sentry
       if (sentryEnabled) {
-        Sentry.metrics.timing('e2e_training_complete.total_duration_ms', totalDuration, 'millisecond', {
-          tags: {
-            [`type_${kbType}`]: 'true',
-            success: 'true'
+        Sentry.addBreadcrumb({
+          message: 'E2E Training Total Duration',
+          category: 'e2e_performance',
+          level: 'info',
+          data: {
+            kb_type: kbType,
+            success: true,
+            total_duration_ms: totalDuration,
+            total_duration_seconds: Math.round(totalDuration / 1000),
+            chat_verification: 'skipped'
           }
         });
       }
@@ -428,12 +423,18 @@ async function runKBTypeTest(
       console.log(chalk.green(`  ✅ Chat verification passed`));
       const totalDuration = Date.now() - startTime;
       
-      // Add total_duration_ms to the already sent training complete event
+      // Add total_duration_ms info to Sentry
       if (sentryEnabled) {
-        Sentry.metrics.timing('e2e_training_complete.total_duration_ms', totalDuration, 'millisecond', {
-          tags: {
-            [`type_${kbType}`]: 'true',
-            success: 'true'
+        Sentry.addBreadcrumb({
+          message: 'E2E Training Total Duration',
+          category: 'e2e_performance',
+          level: 'info',
+          data: {
+            kb_type: kbType,
+            success: true,
+            total_duration_ms: totalDuration,
+            total_duration_seconds: Math.round(totalDuration / 1000),
+            chat_verification: 'passed'
           }
         });
       }
@@ -448,10 +449,17 @@ async function runKBTypeTest(
       
       // Add total_duration_ms for failed chat verification
       if (sentryEnabled) {
-        Sentry.metrics.timing('e2e_training_complete.total_duration_ms', totalDuration, 'millisecond', {
+        Sentry.captureMessage('E2E Training Chat Verification Failed', {
+          level: 'error',
           tags: {
-            [`type_${kbType}`]: 'true',
-            success: 'false'
+            kb_type: kbType,
+            success: 'false',
+            failure_reason: 'chat_verification'
+          },
+          extra: {
+            total_duration_ms: totalDuration,
+            total_duration_seconds: Math.round(totalDuration / 1000),
+            chat_verification: 'failed'
           }
         });
       }
