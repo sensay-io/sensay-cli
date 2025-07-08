@@ -252,7 +252,7 @@ async function runKBTypeTest(
     }
 
     // 2c: Wait for training to complete
-    console.log(chalk.gray(`  Waiting for training to complete (KB ID: ${kbId})...`));
+    console.log(chalk.gray(`  Waiting for training to complete [${kbType}/${scenario.name}] [KB:${kbId}]...`));
     trainingStartTime = Date.now();
     lastStatusChangeTime = trainingStartTime;
     let isTrainingComplete = false;
@@ -275,7 +275,7 @@ async function runKBTypeTest(
         const elapsed = Math.round((currentTime - trainingStartTime) / 1000);
         const stepDuration = currentTime - lastStatusChangeTime;
         
-        console.log(chalk.gray(`  [${kbType}] [${elapsed}s] Status: ${previousStatus || 'INITIAL'} → ${kbStatus.status}`));
+        console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] [${elapsed}s] Status: ${previousStatus || 'INITIAL'} → ${kbStatus.status}`));
         
         // Send Sentry event for status change (single step)
         if (sentryEnabled && previousStatus) {
@@ -310,7 +310,7 @@ async function runKBTypeTest(
       } else if (pollCount % 3 === 0) {
         // Every 15 seconds (3 polls), show we're still waiting
         const elapsed = Math.round((Date.now() - trainingStartTime) / 1000);
-        console.log(chalk.gray(`  [${kbType}] [${elapsed}s] Still waiting... (current status: ${kbStatus.status})`));
+        console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] [${elapsed}s] Still waiting... (current status: ${kbStatus.status})`));
       }
       
       if (kbStatus.status === 'READY') {
