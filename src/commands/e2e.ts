@@ -580,7 +580,7 @@ async function runKBTypeTest(
     }
     
   } catch (error: any) {
-    console.log(chalk.red(`  ❌ Test failed: ${error.message}`));
+    console.log(chalk.red(`  ❌ Test failed [${kbType}/${scenario.name}]: ${error.message}`));
     throw error;
   }
 }
@@ -718,12 +718,17 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
           if (result.status === 'fulfilled') {
             results.push(result.value);
           } else {
-            console.log(chalk.red(`\n❌ Test failed for ${kbType}/${scenario.name}: ${result.reason}`));
+            // The error message already includes the test info from the catch block
+            // but we'll ensure it's also shown here for clarity
+            const errorMsg = result.reason?.message || result.reason;
+            if (!errorMsg.includes(`[${kbType}/${scenario.name}]`)) {
+              console.log(chalk.red(`\n❌ Test failed for ${kbType}/${scenario.name}: ${errorMsg}`));
+            }
             results.push({
               kbType,
               scenarioName: scenario.name,
               success: false,
-              error: result.reason?.message || result.reason,
+              error: errorMsg,
               duration: 0
             });
           }
