@@ -313,7 +313,7 @@ async function runKBTypeTest(
         console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] [${elapsed}s] Still waiting... (current status: ${kbStatus.status})`));
       }
       
-      if (kbStatus.status === 'READY') {
+      if (kbStatus.status === 'VECTOR_CREATED' || kbStatus.status === 'READY') {
         isTrainingComplete = true;
         const currentTime = Date.now();
         const trainingDuration = currentTime - trainingStartTime;
@@ -325,7 +325,7 @@ async function runKBTypeTest(
           throw new Error(`Expected training to fail but it succeeded`);
         }
         
-        console.log(chalk.green(`  ✅ Training completed successfully in ${totalTime}s`));
+        console.log(chalk.green(`  ✅ Training completed successfully (${kbStatus.status}) in ${totalTime}s`));
         
         // Send Sentry event for complete training
         if (sentryEnabled) {
@@ -334,7 +334,8 @@ async function runKBTypeTest(
             tags: {
               kb_type: kbType,
               scenario: scenario.name,
-              success: 'true'
+              success: 'true',
+              final_status: kbStatus.status
             },
             extra: {
               training_duration_ms: trainingDuration,
