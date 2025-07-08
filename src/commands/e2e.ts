@@ -71,7 +71,7 @@ const KB_TEST_SCENARIOS: Record<string, KBTestScenario[]> = {
       name: 'no_cc',
       url: 'https://www.youtube.com/watch?v=2vjPBrBU-TM',
       expectedOutcome: 'unprocessable',
-      expectedError: 'closed captions',
+      expectedError: 'transcript-unavailable',
       description: 'YouTube video without closed captions (should fail)'
     },
     {
