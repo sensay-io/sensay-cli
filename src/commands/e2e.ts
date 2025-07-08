@@ -21,8 +21,19 @@ interface E2EOptions {
   sentryEnvironment?: string;
 }
 
+interface KBTestScenario {
+  name: string;
+  url?: string;
+  content?: string;
+  expectedOutcome: 'success' | 'unprocessable';
+  expectedError?: string;
+  verificationContent?: string;
+  description?: string;
+}
+
 interface TestResult {
   kbType: string;
+  scenarioName: string;
   success: boolean;
   error?: string;
   duration: number;
@@ -31,8 +42,50 @@ interface TestResult {
 const DEFAULT_TIMEOUT_MS = 300000; // 5 minutes
 const AVAILABLE_KB_TYPES = ['text', 'file', 'website', 'youtube'];
 
+// Test scenarios for each KB type
+const KB_TEST_SCENARIOS: Record<string, KBTestScenario[]> = {
+  text: [
+    {
+      name: 'standard',
+      expectedOutcome: 'success',
+      description: 'Standard text training'
+    }
+  ],
+  file: [
+    {
+      name: 'standard',
+      expectedOutcome: 'success',
+      description: 'Standard file upload'
+    }
+  ],
+  website: [
+    {
+      name: 'standard',
+      url: 'httpbin.org',
+      expectedOutcome: 'success',
+      description: 'Standard website training'
+    }
+  ],
+  youtube: [
+    {
+      name: 'no_cc',
+      url: 'https://www.youtube.com/watch?v=2vjPBrBU-TM',
+      expectedOutcome: 'unprocessable',
+      expectedError: 'closed captions',
+      description: 'YouTube video without closed captions (should fail)'
+    },
+    {
+      name: 'with_cc',
+      url: 'https://www.youtube.com/watch?v=B3EzRAgjo_s',
+      expectedOutcome: 'success',
+      description: 'YouTube video with closed captions (should succeed)'
+    }
+  ]
+};
+
 async function runKBTypeTest(
-  kbType: string, 
+  kbType: string,
+  scenario: KBTestScenario,
   userId: string, 
   testRunId: string, 
   timeoutMs: number,
@@ -42,11 +95,14 @@ async function runKBTypeTest(
   const startTime = Date.now();
   let trainingStartTime = 0;
   let lastStatusChangeTime = startTime;
-  console.log(chalk.cyan(`\n📋 Testing KB type: ${kbType} (started at ${new Date().toISOString()})`));
+  console.log(chalk.cyan(`\n📋 Testing KB type: ${kbType}/${scenario.name} (started at ${new Date().toISOString()})`));
+  if (scenario.description) {
+    console.log(chalk.gray(`  ${scenario.description}`));
+  }
   
   try {
     // 2a: Create a new replica
-    const replicaName = `E2E Test Replica ${kbType} ${testRunId}`;
+    const replicaName = `E2E Test Replica ${kbType}/${scenario.name} ${testRunId}`;
     console.log(chalk.gray(`  Creating replica: ${replicaName}`));
     
     const replicaResponse = await ReplicasService.postV1Replicas('2025-03-25', {
@@ -114,9 +170,7 @@ async function runKBTypeTest(
         break;
         
       case 'youtube':
-        // Use a short, stable YouTube video for testing
-        // This is a 30-second test pattern video that should remain available
-        const youtubeUrl = 'https://www.youtube.com/watch?v=2vjPBrBU-TM';
+        const youtubeUrl = scenario.url!;
         console.log(chalk.gray(`  Training with YouTube URL: ${youtubeUrl}`));
         
         const youtubeKbResponse = await KnowledgeBaseService.postV1ReplicasKnowledgeBase(
@@ -231,6 +285,7 @@ async function runKBTypeTest(
             level: 'info',
             data: {
               kb_type: kbType,
+              scenario: scenario.name,
               from_status: previousStatus,
               to_status: kbStatus.status,
               step_duration_ms: stepDuration,
@@ -263,6 +318,13 @@ async function runKBTypeTest(
         const currentTime = Date.now();
         const trainingDuration = currentTime - trainingStartTime;
         const totalTime = Math.round(trainingDuration / 1000);
+        
+        if (scenario.expectedOutcome === 'unprocessable') {
+          // This is unexpected - we expected it to fail
+          console.log(chalk.red(`  ❌ Training succeeded but was expected to fail`));
+          throw new Error(`Expected training to fail but it succeeded`);
+        }
+        
         console.log(chalk.green(`  ✅ Training completed successfully in ${totalTime}s`));
         
         // Send Sentry event for complete training
@@ -271,6 +333,7 @@ async function runKBTypeTest(
             level: 'info',
             tags: {
               kb_type: kbType,
+              scenario: scenario.name,
               success: 'true'
             },
             extra: {
@@ -283,17 +346,52 @@ async function runKBTypeTest(
         break;
       } else if (kbStatus.status === 'UNPROCESSABLE') {
         const errorMsg = kbStatus.error?.message || 'Unknown error';
+        const currentTime = Date.now();
+        const trainingDuration = currentTime - trainingStartTime;
+        
+        if (scenario.expectedOutcome === 'unprocessable') {
+          // This is expected - check if the error matches
+          if (scenario.expectedError && !errorMsg.toLowerCase().includes(scenario.expectedError.toLowerCase())) {
+            console.log(chalk.red(`  ❌ Training failed as expected but with wrong error`));
+            console.log(chalk.gray(`     Expected error to contain: ${scenario.expectedError}`));
+            console.log(chalk.gray(`     Actual error: ${errorMsg}`));
+            throw new Error(`Expected error containing "${scenario.expectedError}" but got: ${errorMsg}`);
+          }
+          
+          console.log(chalk.green(`  ✅ Training failed as expected with status UNPROCESSABLE: ${errorMsg}`));
+          isTrainingComplete = true;
+          
+          // Send Sentry event for expected failure
+          if (sentryEnabled) {
+            Sentry.captureMessage('E2E Training Expected Failure', {
+              level: 'info',
+              tags: {
+                kb_type: kbType,
+                scenario: scenario.name,
+                success: 'true',
+                expected_failure: 'true'
+              },
+              extra: {
+                training_duration_ms: trainingDuration,
+                training_duration_seconds: Math.round(trainingDuration / 1000),
+                error_message: errorMsg
+              }
+            });
+          }
+          
+          break;
+        }
+        
+        // Unexpected failure
         console.log(chalk.red(`  ❌ Training failed with status UNPROCESSABLE: ${errorMsg}`));
         
         // Send Sentry event for failed training
         if (sentryEnabled) {
-          const currentTime = Date.now();
-          const trainingDuration = currentTime - trainingStartTime;
-          
           Sentry.captureMessage('E2E Training Failed', {
             level: 'error',
             tags: {
               kb_type: kbType,
+              scenario: scenario.name,
               success: 'false',
               failure_reason: 'unprocessable'
             },
@@ -336,9 +434,13 @@ async function runKBTypeTest(
       throw new Error(`Training timeout after ${timeoutMs / 1000}s`);
     }
 
-    // Skip chat verification if requested
-    if (skipChatVerification) {
-      console.log(chalk.gray(`  Skipping chat verification as requested`));
+    // Skip chat verification if requested or if expected to fail
+    if (skipChatVerification || scenario.expectedOutcome === 'unprocessable') {
+      if (skipChatVerification) {
+        console.log(chalk.gray(`  Skipping chat verification as requested`));
+      } else {
+        console.log(chalk.gray(`  Skipping chat verification for expected failure scenario`));
+      }
       const totalDuration = Date.now() - startTime;
       
       // Add total_duration_ms info to Sentry
@@ -349,6 +451,7 @@ async function runKBTypeTest(
           level: 'info',
           data: {
             kb_type: kbType,
+            scenario: scenario.name,
             success: true,
             total_duration_ms: totalDuration,
             total_duration_seconds: Math.round(totalDuration / 1000),
@@ -359,6 +462,7 @@ async function runKBTypeTest(
       
       return {
         kbType,
+        scenarioName: scenario.name,
         success: true,
         duration: totalDuration
       };
@@ -441,6 +545,7 @@ async function runKBTypeTest(
       
       return {
         kbType,
+        scenarioName: scenario.name,
         success: true,
         duration: totalDuration
       };
@@ -453,6 +558,7 @@ async function runKBTypeTest(
           level: 'error',
           tags: {
             kb_type: kbType,
+            scenario: scenario.name,
             success: 'false',
             failure_reason: 'chat_verification'
           },
@@ -466,6 +572,7 @@ async function runKBTypeTest(
       
       return {
         kbType,
+        scenarioName: scenario.name,
         success: false,
         error: 'Chat verification failed',
         duration: totalDuration
@@ -543,7 +650,14 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
 
     console.log(chalk.blue('\n🧪 Starting E2E tests...'));
     console.log(chalk.gray(`Timeout: ${timeoutMs / 1000}s`));
-    console.log(chalk.gray(`KB Types: ${kbTypesToTest.join(', ')}\n`));
+    console.log(chalk.gray(`KB Types: ${kbTypesToTest.join(', ')}`));
+    
+    // Count total scenarios
+    let totalScenarios = 0;
+    for (const kbType of kbTypesToTest) {
+      totalScenarios += (KB_TEST_SCENARIOS[kbType] || [{ name: 'standard' }]).length;
+    }
+    console.log(chalk.gray(`Total scenarios: ${totalScenarios}\n`));
 
     // Generate unique test run ID to allow parallel execution
     const testRunId = uuidv4().substring(0, 8);
@@ -575,14 +689,23 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
       
       console.log(chalk.green(`✅ User created: ${userId}\n`));
 
-      // Step 2: Run tests for each KB type
+      // Step 2: Run tests for each KB type and scenario
+      // Build list of all test scenarios to run
+      const allTests: Array<{ kbType: string; scenario: KBTestScenario }> = [];
+      for (const kbType of kbTypesToTest) {
+        const scenarios = KB_TEST_SCENARIOS[kbType] || [{ name: 'standard', expectedOutcome: 'success' }];
+        for (const scenario of scenarios) {
+          allTests.push({ kbType, scenario });
+        }
+      }
+      
       if (options.parallel) {
         console.log(chalk.cyan('\n🚀 Running tests in parallel mode...'));
-        console.log(chalk.gray(`  Starting ${kbTypesToTest.length} tests simultaneously at ${new Date().toISOString()}`));
+        console.log(chalk.gray(`  Starting ${allTests.length} tests simultaneously at ${new Date().toISOString()}`));
         
         // Create all test tasks - they start executing immediately
-        const testTasks = kbTypesToTest.map(kbType => 
-          runKBTypeTest(kbType, userId, testRunId, timeoutMs, options.skipChatVerification || false, sentryEnabled)
+        const testTasks = allTests.map(({ kbType, scenario }) => 
+          runKBTypeTest(kbType, scenario, userId, testRunId, timeoutMs, options.skipChatVerification || false, sentryEnabled)
         );
         
         // Wait for all tests to complete
@@ -591,13 +714,14 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
         
         // Process results
         parallelResults.forEach((result, index) => {
-          const kbType = kbTypesToTest[index];
+          const { kbType, scenario } = allTests[index];
           if (result.status === 'fulfilled') {
             results.push(result.value);
           } else {
-            console.log(chalk.red(`\n❌ Test failed for ${kbType}: ${result.reason}`));
+            console.log(chalk.red(`\n❌ Test failed for ${kbType}/${scenario.name}: ${result.reason}`));
             results.push({
               kbType,
+              scenarioName: scenario.name,
               success: false,
               error: result.reason?.message || result.reason,
               duration: 0
@@ -606,19 +730,20 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
         });
       } else {
         // Sequential mode
-        for (const kbType of kbTypesToTest) {
+        for (const { kbType, scenario } of allTests) {
           try {
-            const result = await runKBTypeTest(kbType, userId, testRunId, timeoutMs, options.skipChatVerification || false, sentryEnabled);
+            const result = await runKBTypeTest(kbType, scenario, userId, testRunId, timeoutMs, options.skipChatVerification || false, sentryEnabled);
             results.push(result);
           } catch (error: any) {
             results.push({
               kbType,
+              scenarioName: scenario.name,
               success: false,
               error: error.message,
               duration: 0
             });
           }
-      }
+        }
       }
 
     } finally {
@@ -658,7 +783,8 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
     for (const result of results) {
       const status = result.success ? chalk.green('✅ PASS') : chalk.red('❌ FAIL');
       const duration = `${(result.duration / 1000).toFixed(1)}s`;
-      console.log(`${status} ${result.kbType.padEnd(10)} (${duration})${result.error ? ` - ${result.error}` : ''}`);
+      const testName = `${result.kbType}/${result.scenarioName}`;
+      console.log(`${status} ${testName.padEnd(20)} (${duration})${result.error ? ` - ${result.error}` : ''}`);
     }
     
     // Exit with appropriate code
