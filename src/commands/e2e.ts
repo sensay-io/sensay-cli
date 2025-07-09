@@ -139,34 +139,6 @@ async function runKBTypeTest(
   sentryConfig: { dsn?: string; environment?: string; sendErrors: boolean; sendPerformanceMetrics: boolean } = { sendErrors: false, sendPerformanceMetrics: false },
   simulateFailure: boolean = false
 ): Promise<TestResult> {
-  // Use Sentry performance monitoring if enabled
-  if (sentryConfig.dsn && sentryConfig.sendPerformanceMetrics) {
-    return Sentry.startSpan({
-      name: `E2E Test: ${kbType}/${scenario.name}`,
-      op: 'e2e_test',
-      attributes: {
-        kb_type: kbType,
-        scenario: scenario.name,
-        test_run_id: testRunId
-      }
-    }, async () => {
-      return await runKBTypeTestCore(kbType, scenario, userId, testRunId, timeoutMs, skipChatVerification, sentryConfig, simulateFailure);
-    });
-  } else {
-    return await runKBTypeTestCore(kbType, scenario, userId, testRunId, timeoutMs, skipChatVerification, sentryConfig, simulateFailure);
-  }
-}
-
-async function runKBTypeTestCore(
-  kbType: string,
-  scenario: KBTestScenario,
-  userId: string, 
-  testRunId: string, 
-  timeoutMs: number,
-  skipChatVerification: boolean,
-  sentryConfig: { dsn?: string; environment?: string; sendErrors: boolean; sendPerformanceMetrics: boolean },
-  simulateFailure: boolean
-): Promise<TestResult> {
   const startTime = Date.now();
   let trainingStartTime = 0;
   let lastStatusChangeTime = startTime;
@@ -363,6 +335,26 @@ async function runKBTypeTestCore(
     let previousStatus: string | undefined;
     let pollCount = 0;
     
+    // Wrap only the training monitoring in performance span
+    if (sentryConfig.dsn && sentryConfig.sendPerformanceMetrics) {
+      await Sentry.startSpan({
+        name: `E2E Training: ${kbType}/${scenario.name}`,
+        op: 'e2e_training',
+        attributes: {
+          kb_type: kbType,
+          scenario: scenario.name,
+          test_run_id: testRunId,
+          kb_id: kbId
+        }
+      }, async () => {
+        await monitorTrainingProgress();
+      });
+    } else {
+      await monitorTrainingProgress();
+    }
+    
+    async function monitorTrainingProgress() {
+    
     while (Date.now() - trainingStartTime < timeoutMs) {
       pollCount++;
       
@@ -528,6 +520,8 @@ async function runKBTypeTestCore(
       
       throw new Error(`Training timeout after ${timeoutMs / 1000}s`);
     }
+    
+    } // End of monitorTrainingProgress function
 
     // Skip chat verification if requested or if expected to fail
     if (skipChatVerification || scenario.expectedOutcome === 'unprocessable') {
