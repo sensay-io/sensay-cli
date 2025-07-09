@@ -19,6 +19,7 @@ interface E2EOptions {
   parallel?: boolean;
   sentryDsn?: string;
   sentryEnvironment?: string;
+  preCleanup?: boolean;
 }
 
 interface KBTestScenario {
@@ -41,6 +42,48 @@ interface TestResult {
 
 const DEFAULT_TIMEOUT_MS = 300000; // 5 minutes
 const AVAILABLE_KB_TYPES = ['text', 'file', 'website', 'youtube'];
+
+// Helper function to format API error details
+function formatApiError(error: any, prefix: string = ''): string {
+  let errorMsg = error.message || 'Unknown error';
+  
+  if (error instanceof ApiError) {
+    const details: string[] = [errorMsg];
+    
+    if (error.status) {
+      details.push(`Status: ${error.status}`);
+    }
+    
+    if (error.body) {
+      const body = error.body as any;
+      if (body.message && body.message !== errorMsg) {
+        details.push(`Message: ${body.message}`);
+      }
+      if (body.request_id) {
+        details.push(`Request ID: ${body.request_id}`);
+      }
+      if (body.fingerprint) {
+        details.push(`Fingerprint: ${body.fingerprint}`);
+      }
+      if (body.error) {
+        details.push(`Error: ${body.error}`);
+      }
+      // Include any other fields that might be in the error body
+      const otherFields = Object.keys(body).filter(key => 
+        !['message', 'request_id', 'fingerprint', 'error'].includes(key)
+      );
+      for (const field of otherFields) {
+        if (body[field] !== null && body[field] !== undefined) {
+          details.push(`${field}: ${JSON.stringify(body[field])}`);
+        }
+      }
+    }
+    
+    errorMsg = details.join(' | ');
+  }
+  
+  return prefix ? `${prefix}: ${errorMsg}` : errorMsg;
+}
 
 // Test scenarios for each KB type
 const KB_TEST_SCENARIOS: Record<string, KBTestScenario[]> = {
@@ -95,22 +138,23 @@ async function runKBTypeTest(
   const startTime = Date.now();
   let trainingStartTime = 0;
   let lastStatusChangeTime = startTime;
-  console.log(chalk.cyan(`\n📋 Testing KB type: ${kbType}/${scenario.name} (started at ${new Date().toISOString()})`));
+  console.log(chalk.cyan(`\n[${kbType}/${scenario.name}] 📋 Testing KB type (started at ${new Date().toISOString()})`));
   if (scenario.description) {
-    console.log(chalk.gray(`  ${scenario.description}`));
+    console.log(chalk.gray(`[${kbType}/${scenario.name}] ${scenario.description}`));
   }
   
   try {
     // 2a: Create a new replica
-    const replicaName = `E2E Test Replica ${kbType}/${scenario.name} ${testRunId}`;
-    console.log(chalk.gray(`  Creating replica: ${replicaName}`));
+    const uniqueTestId = `${testRunId}-${uuidv4().substring(0, 4)}`;
+    const replicaName = `E2E Test Replica ${kbType}/${scenario.name} ${uniqueTestId}`;
+    console.log(chalk.gray(`[${kbType}/${scenario.name}] Creating replica: ${replicaName}`));
     
     const replicaResponse = await ReplicasService.postV1Replicas('2025-03-25', {
       name: replicaName,
       shortDescription: `Test replica for ${kbType} KB type`,
       greeting: `Hello! I'm a test replica trained on ${kbType} content.`,
       ownerID: userId,
-      slug: `e2e-test-${kbType}-${testRunId}`,
+      slug: `e2e-test-${kbType}-${scenario.name}-${uniqueTestId}`,
       llm: {
         model: 'claude-3-5-haiku-latest',
         memoryMode: 'rag-search',
@@ -120,7 +164,7 @@ async function runKBTypeTest(
     });
     
     const replicaUuid = replicaResponse.uuid!;
-    console.log(chalk.gray(`  Replica created: ${replicaUuid}`));
+    console.log(chalk.gray(`[${kbType}/${scenario.name}] Replica created: ${replicaUuid}`));
 
     // 2b: Train the replica based on KB type
     let trainingContent: string;
@@ -128,8 +172,8 @@ async function runKBTypeTest(
     
     switch (kbType) {
       case 'text':
-        trainingContent = `This is test content for E2E testing with ID ${testRunId}. The secret phrase is: RAINBOW_UNICORN_${testRunId}`;
-        console.log(chalk.gray(`  Training with text content...`));
+        trainingContent = `This is test content for E2E testing with ID ${uniqueTestId}. The secret phrase is: RAINBOW_UNICORN_${uniqueTestId}`;
+        console.log(chalk.gray(`[${kbType}/${scenario.name}] Training with text content...`));
         
         const textKbResponse = await KnowledgeBaseService.postV1ReplicasKnowledgeBase(
           replicaUuid,
@@ -148,11 +192,11 @@ async function runKBTypeTest(
         
       case 'website':
         // Use a simple test website that always returns consistent content
-        // Encode the test content with the actual testRunId
-        const websiteContent = `This is test content for E2E testing with ID ${testRunId}. The secret phrase is: RAINBOW_UNICORN_${testRunId}`;
+        // Encode the test content with the actual uniqueTestId
+        const websiteContent = `This is test content for E2E testing with ID ${uniqueTestId}. The secret phrase is: RAINBOW_UNICORN_${uniqueTestId}`;
         const base64Content = Buffer.from(websiteContent).toString('base64');
         const testUrl = `https://httpbin.org/base64/${base64Content}`;
-        console.log(chalk.gray(`  Training with website URL (httpbin.org test)...`));
+        console.log(chalk.gray(`[${kbType}/${scenario.name}] Training with website URL (httpbin.org test)...`));
         
         const websiteKbResponse = await KnowledgeBaseService.postV1ReplicasKnowledgeBase(
           replicaUuid,
@@ -171,7 +215,7 @@ async function runKBTypeTest(
         
       case 'youtube':
         const youtubeUrl = scenario.url!;
-        console.log(chalk.gray(`  Training with YouTube URL: ${youtubeUrl}`));
+        console.log(chalk.gray(`[${kbType}/${scenario.name}] Training with YouTube URL: ${youtubeUrl}`));
         
         const youtubeKbResponse = await KnowledgeBaseService.postV1ReplicasKnowledgeBase(
           replicaUuid,
@@ -192,12 +236,12 @@ async function runKBTypeTest(
         // Create a temporary test file
         const tempDir = path.join(process.cwd(), '.e2e-temp');
         await fs.ensureDir(tempDir);
-        const testFileName = `test-${testRunId}.txt`;
+        const testFileName = `test-${uniqueTestId}.txt`;
         const testFilePath = path.join(tempDir, testFileName);
-        const fileContent = `This is test content for E2E testing with ID ${testRunId}. The secret phrase is: RAINBOW_UNICORN_${testRunId}`;
+        const fileContent = `This is test content for E2E testing with ID ${uniqueTestId}. The secret phrase is: RAINBOW_UNICORN_${uniqueTestId}`;
         
         await fs.writeFile(testFilePath, fileContent);
-        console.log(chalk.gray(`  Training with file: ${testFileName}`));
+        console.log(chalk.gray(`[${kbType}/${scenario.name}] Training with file: ${testFileName}`));
         
         try {
           // Create knowledge base entry for file upload
@@ -219,7 +263,7 @@ async function runKBTypeTest(
             throw new Error('Failed to get signed URL for file upload');
           }
           
-          console.log(chalk.gray(`  Uploading file to cloud storage...`));
+          console.log(chalk.gray(`[${kbType}/${scenario.name}] Uploading file to cloud storage...`));
           
           // Upload file to signed URL
           const fileBuffer = await fs.readFile(testFilePath);
@@ -252,7 +296,7 @@ async function runKBTypeTest(
     }
 
     // 2c: Wait for training to complete
-    console.log(chalk.gray(`  Waiting for training to complete [${kbType}/${scenario.name}] [KB:${kbId}]...`));
+    console.log(chalk.gray(`[${kbType}/${scenario.name}] [KB:${kbId}] Waiting for training to complete...`));
     trainingStartTime = Date.now();
     lastStatusChangeTime = trainingStartTime;
     let isTrainingComplete = false;
@@ -299,13 +343,13 @@ async function runKBTypeTest(
         
         // Log additional details for certain statuses
         if (kbStatus.status === 'FILE_UPLOADED') {
-          console.log(chalk.gray(`    File upload confirmed`));
+          console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] File upload confirmed`));
         } else if (kbStatus.status === 'RAW_TEXT') {
-          console.log(chalk.gray(`    Text content received`));
+          console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Text content received`));
         } else if (kbStatus.status === 'PROCESSED_TEXT') {
-          console.log(chalk.gray(`    Text processing completed`));
+          console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Text processing completed`));
         } else if (kbStatus.status === 'VECTOR_CREATED') {
-          console.log(chalk.gray(`    Vector embeddings created`));
+          console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Vector embeddings created`));
         }
       } else if (pollCount % 3 === 0) {
         // Every 15 seconds (3 polls), show we're still waiting
@@ -321,11 +365,11 @@ async function runKBTypeTest(
         
         if (scenario.expectedOutcome === 'unprocessable') {
           // This is unexpected - we expected it to fail
-          console.log(chalk.red(`  ❌ Training succeeded but was expected to fail`));
+          console.log(chalk.red(`  [${kbType}/${scenario.name}] [KB:${kbId}] ❌ Training succeeded but was expected to fail`));
           throw new Error(`Expected training to fail but it succeeded`);
         }
         
-        console.log(chalk.green(`  ✅ Training completed successfully (${kbStatus.status}) in ${totalTime}s`));
+        console.log(chalk.green(`  [${kbType}/${scenario.name}] [KB:${kbId}] ✅ Training completed successfully (${kbStatus.status}) in ${totalTime}s`));
         
         // Send Sentry event for complete training
         if (sentryEnabled) {
@@ -353,13 +397,13 @@ async function runKBTypeTest(
         if (scenario.expectedOutcome === 'unprocessable') {
           // This is expected - check if the error matches
           if (scenario.expectedError && !errorMsg.toLowerCase().includes(scenario.expectedError.toLowerCase())) {
-            console.log(chalk.red(`  ❌ Training failed as expected but with wrong error`));
-            console.log(chalk.gray(`     Expected error to contain: ${scenario.expectedError}`));
-            console.log(chalk.gray(`     Actual error: ${errorMsg}`));
+            console.log(chalk.red(`  [${kbType}/${scenario.name}] [KB:${kbId}] ❌ Training failed as expected but with wrong error`));
+            console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Expected error to contain: ${scenario.expectedError}`));
+            console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Actual error: ${errorMsg}`));
             throw new Error(`Expected error containing "${scenario.expectedError}" but got: ${errorMsg}`);
           }
           
-          console.log(chalk.green(`  ✅ Training failed as expected with status UNPROCESSABLE: ${errorMsg}`));
+          console.log(chalk.green(`  [${kbType}/${scenario.name}] [KB:${kbId}] ✅ Training failed as expected with status UNPROCESSABLE: ${errorMsg}`));
           isTrainingComplete = true;
           
           // Send Sentry event for expected failure
@@ -384,7 +428,7 @@ async function runKBTypeTest(
         }
         
         // Unexpected failure
-        console.log(chalk.red(`  ❌ Training failed with status UNPROCESSABLE: ${errorMsg}`));
+        console.log(chalk.red(`  [${kbType}/${scenario.name}] [KB:${kbId}] ❌ Training failed with status UNPROCESSABLE: ${errorMsg}`));
         
         // Send Sentry event for failed training
         if (sentryEnabled) {
@@ -438,9 +482,9 @@ async function runKBTypeTest(
     // Skip chat verification if requested or if expected to fail
     if (skipChatVerification || scenario.expectedOutcome === 'unprocessable') {
       if (skipChatVerification) {
-        console.log(chalk.gray(`  Skipping chat verification as requested`));
+        console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Skipping chat verification as requested`));
       } else {
-        console.log(chalk.gray(`  Skipping chat verification for expected failure scenario`));
+        console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Skipping chat verification for expected failure scenario`));
       }
       const totalDuration = Date.now() - startTime;
       
@@ -470,7 +514,7 @@ async function runKBTypeTest(
     }
 
     // 2d: Chat with replica and verify response
-    console.log(chalk.gray(`  Testing chat with trained content...`));
+    console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Testing chat with trained content...`));
     
     let testMessage: string;
     let verificationPassed = false;
@@ -503,13 +547,13 @@ async function runKBTypeTest(
     
     // For text and file, we expect the exact phrase
     if (kbType === 'text' || kbType === 'file') {
-      const expectedPhrase = `RAINBOW_UNICORN_${testRunId}`;
+      const expectedPhrase = `RAINBOW_UNICORN_${uniqueTestId}`;
       verificationPassed = responseContent.includes(expectedPhrase);
       
       if (!verificationPassed) {
-        console.log(chalk.red(`  ❌ Chat verification failed`));
-        console.log(chalk.gray(`     Expected phrase: ${expectedPhrase}`));
-        console.log(chalk.gray(`     Response: ${responseContent.substring(0, 100)}...`));
+        console.log(chalk.red(`  [${kbType}/${scenario.name}] [KB:${kbId}] ❌ Chat verification failed`));
+        console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Expected phrase: ${expectedPhrase}`));
+        console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Response: ${responseContent.substring(0, 100)}...`));
       }
     } else {
       // For website and youtube, just check if there's a reasonable response
@@ -519,13 +563,13 @@ async function runKBTypeTest(
                          !responseContent.toLowerCase().includes('no information');
       
       if (!verificationPassed) {
-        console.log(chalk.red(`  ❌ Chat verification failed - no meaningful response`));
-        console.log(chalk.gray(`     Response: ${responseContent.substring(0, 100)}...`));
+        console.log(chalk.red(`  [${kbType}/${scenario.name}] [KB:${kbId}] ❌ Chat verification failed - no meaningful response`));
+        console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Response: ${responseContent.substring(0, 100)}...`));
       }
     }
     
     if (verificationPassed) {
-      console.log(chalk.green(`  ✅ Chat verification passed`));
+      console.log(chalk.green(`  [${kbType}/${scenario.name}] [KB:${kbId}] ✅ Chat verification passed`));
       const totalDuration = Date.now() - startTime;
       
       // Add total_duration_ms info to Sentry
@@ -581,8 +625,78 @@ async function runKBTypeTest(
     }
     
   } catch (error: any) {
-    console.log(chalk.red(`  ❌ Test failed [${kbType}/${scenario.name}]: ${error.message}`));
+    const errorDetails = formatApiError(error);
+    console.log(chalk.red(`[${kbType}/${scenario.name}] ❌ Test failed: ${errorDetails}`));
+    
+    // Re-throw with the detailed error message
+    if (error instanceof ApiError) {
+      error.message = errorDetails;
+    }
     throw error;
+  }
+}
+
+// Helper function to perform pre-cleanup of users
+async function performPreCleanup(effectiveConfig: any, apiKey: string): Promise<void> {
+  console.log(chalk.cyan('🧹 Performing pre-cleanup of users...'));
+  
+  // Configure OpenAPI client without user ID first
+  configureOpenAPI({ ...effectiveConfig, apiKey });
+  
+  try {
+    // Get all replicas to find user IDs
+    console.log(chalk.gray('  Finding users by listing all replicas...'));
+    const replicas = await ReplicasService.getV1Replicas(
+      undefined, // ownerUuid
+      undefined, // ownerId
+      undefined, // page
+      1, // pageIndex
+      1000, // pageSize - large number to get all replicas
+      undefined, // slug
+      undefined, // search
+      undefined, // tags
+      'name', // sort
+      undefined, // integration
+      '2025-03-25' // xApiVersion
+    );
+    
+    // Extract unique owner IDs from replicas
+    const ownerIds = new Set<string>();
+    for (const replica of replicas.items) {
+      if (replica.ownerID) {
+        ownerIds.add(replica.ownerID);
+      }
+    }
+    
+    console.log(chalk.gray(`  Found ${ownerIds.size} unique users to potentially clean up`));
+    
+    // For each owner ID, try to delete that user
+    let deletedCount = 0;
+    let errorCount = 0;
+    
+    for (const ownerId of ownerIds) {
+      try {
+        // Configure API to impersonate this user
+        configureOpenAPI({ ...effectiveConfig, apiKey, userId: ownerId });
+        
+        // Try to delete the user
+        await UsersService.deleteV1UsersMe('2025-03-25');
+        deletedCount++;
+        console.log(chalk.gray(`  ✅ Deleted user: ${ownerId}`));
+      } catch (error: any) {
+        errorCount++;
+        // Only log errors that are not 404 (user already deleted)
+        if (error.status !== 404) {
+          console.log(chalk.gray(`  ⚠️  Failed to delete user ${ownerId}: ${error.message}`));
+        }
+      }
+    }
+    
+    console.log(chalk.green(`✅ Pre-cleanup completed: ${deletedCount} users deleted, ${errorCount} errors`));
+    
+  } catch (error: any) {
+    console.log(chalk.red(`❌ Pre-cleanup failed: ${formatApiError(error)}`));
+    // Don't exit - continue with the test
   }
 }
 
@@ -610,6 +724,11 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
     if (!apiKey) {
       console.error(chalk.red('❌ API key is required. Use --apikey option or configure it.'));
       process.exit(1);
+    }
+
+    // Perform pre-cleanup if requested
+    if (options.preCleanup) {
+      await performPreCleanup(effectiveConfig, apiKey);
     }
 
     // Configure OpenAPI client
@@ -722,9 +841,7 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
             // The error message already includes the test info from the catch block
             // but we'll ensure it's also shown here for clarity
             const errorMsg = result.reason?.message || result.reason;
-            if (!errorMsg.includes(`[${kbType}/${scenario.name}]`)) {
-              console.log(chalk.red(`\n❌ Test failed for ${kbType}/${scenario.name}: ${errorMsg}`));
-            }
+            // Error message already includes test info from the catch block
             results.push({
               kbType,
               scenarioName: scenario.name,
@@ -797,20 +914,8 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
     process.exit(failureCount > 0 ? 1 : 0);
     
   } catch (error: any) {
-    if (error instanceof ApiError) {
-      console.error(chalk.red(`\n❌ API Error: ${error.message}`));
-      if (error.status) {
-        console.error(chalk.red(`Status: ${error.status}`));
-      }
-      if (error.body) {
-        const body = error.body as any;
-        if (body.request_id) {
-          console.error(chalk.red(`Request ID: ${body.request_id}`));
-        }
-      }
-    } else {
-      console.error(chalk.red(`\n❌ Error: ${error.message}`));
-    }
+    const errorDetails = formatApiError(error);
+    console.error(chalk.red(`\n❌ Error: ${errorDetails}`));
     process.exit(1);
   }
 }
@@ -826,6 +931,7 @@ export function setupE2ECommand(program: Command): void {
     .option('--skip-chat-verification', 'skip chat verification after training')
     .option('--sentry-dsn <dsn>', 'Sentry DSN for performance metrics')
     .option('--sentry-environment <env>', 'Sentry environment (defaults to "unspecified")')
+    .option('--pre-cleanup', 'delete all users in the organization before running tests')
     .action((options) => {
       const globalOptions = program.opts();
       return e2eCommand({ ...options, ...globalOptions });
