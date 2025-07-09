@@ -145,8 +145,7 @@ async function runKBTypeTest(
   
   try {
     // 2a: Create a new replica
-    const uniqueTestId = `${testRunId}-${uuidv4().substring(0, 4)}`;
-    const replicaName = `E2E Test Replica ${kbType}/${scenario.name} ${uniqueTestId}`;
+    const replicaName = `E2E Test Replica ${kbType}/${scenario.name} ${testRunId}`;
     console.log(chalk.gray(`[${kbType}/${scenario.name}] Creating replica: ${replicaName}`));
     
     const replicaResponse = await ReplicasService.postV1Replicas('2025-03-25', {
@@ -154,7 +153,7 @@ async function runKBTypeTest(
       shortDescription: `Test replica for ${kbType} KB type`,
       greeting: `Hello! I'm a test replica trained on ${kbType} content.`,
       ownerID: userId,
-      slug: `e2e-test-${kbType}-${scenario.name}-${uniqueTestId}`,
+      slug: `e2e-test-${kbType}-${scenario.name}-${testRunId}`,
       llm: {
         model: 'claude-3-5-haiku-latest',
         memoryMode: 'rag-search',
@@ -172,7 +171,7 @@ async function runKBTypeTest(
     
     switch (kbType) {
       case 'text':
-        trainingContent = `This is test content for E2E testing with ID ${uniqueTestId}. The secret phrase is: RAINBOW_UNICORN_${uniqueTestId}`;
+        trainingContent = `This is test content for E2E testing with ID ${testRunId}. The secret phrase is: RAINBOW_UNICORN_${testRunId}`;
         console.log(chalk.gray(`[${kbType}/${scenario.name}] Training with text content...`));
         
         const textKbResponse = await KnowledgeBaseService.postV1ReplicasKnowledgeBase(
@@ -192,8 +191,8 @@ async function runKBTypeTest(
         
       case 'website':
         // Use a simple test website that always returns consistent content
-        // Encode the test content with the actual uniqueTestId
-        const websiteContent = `This is test content for E2E testing with ID ${uniqueTestId}. The secret phrase is: RAINBOW_UNICORN_${uniqueTestId}`;
+        // Encode the test content with the actual testRunId
+        const websiteContent = `This is test content for E2E testing with ID ${testRunId}. The secret phrase is: RAINBOW_UNICORN_${testRunId}`;
         const base64Content = Buffer.from(websiteContent).toString('base64');
         const testUrl = `https://httpbin.org/base64/${base64Content}`;
         console.log(chalk.gray(`[${kbType}/${scenario.name}] Training with website URL (httpbin.org test)...`));
@@ -236,9 +235,9 @@ async function runKBTypeTest(
         // Create a temporary test file
         const tempDir = path.join(process.cwd(), '.e2e-temp');
         await fs.ensureDir(tempDir);
-        const testFileName = `test-${uniqueTestId}.txt`;
+        const testFileName = `test-${testRunId}.txt`;
         const testFilePath = path.join(tempDir, testFileName);
-        const fileContent = `This is test content for E2E testing with ID ${uniqueTestId}. The secret phrase is: RAINBOW_UNICORN_${uniqueTestId}`;
+        const fileContent = `This is test content for E2E testing with ID ${testRunId}. The secret phrase is: RAINBOW_UNICORN_${testRunId}`;
         
         await fs.writeFile(testFilePath, fileContent);
         console.log(chalk.gray(`[${kbType}/${scenario.name}] Training with file: ${testFileName}`));
@@ -547,7 +546,7 @@ async function runKBTypeTest(
     
     // For text and file, we expect the exact phrase
     if (kbType === 'text' || kbType === 'file') {
-      const expectedPhrase = `RAINBOW_UNICORN_${uniqueTestId}`;
+      const expectedPhrase = `RAINBOW_UNICORN_${testRunId}`;
       verificationPassed = responseContent.includes(expectedPhrase);
       
       if (!verificationPassed) {
