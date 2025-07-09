@@ -20,6 +20,8 @@ interface E2EOptions {
   sentryDsn?: string;
   sentryEnvironment?: string;
   preCleanup?: boolean;
+  sentrySendErrors?: boolean;
+  sentrySendPerformanceMetrics?: boolean;
 }
 
 interface KBTestScenario {
@@ -133,7 +135,7 @@ async function runKBTypeTest(
   testRunId: string, 
   timeoutMs: number,
   skipChatVerification: boolean,
-  sentryEnabled: boolean = false
+  sentryConfig: { dsn?: string; environment?: string; sendErrors: boolean; sendPerformanceMetrics: boolean } = { sendErrors: false, sendPerformanceMetrics: false }
 ): Promise<TestResult> {
   const startTime = Date.now();
   let trainingStartTime = 0;
@@ -320,22 +322,8 @@ async function runKBTypeTest(
         
         console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] [${elapsed}s] Status: ${previousStatus || 'INITIAL'} → ${kbStatus.status}`));
         
-        // Send Sentry event for status change (single step)
-        if (sentryEnabled && previousStatus) {
-          Sentry.addBreadcrumb({
-            message: 'E2E Training Step',
-            category: 'e2e_training_single_step',
-            level: 'info',
-            data: {
-              kb_type: kbType,
-              scenario: scenario.name,
-              from_status: previousStatus,
-              to_status: kbStatus.status,
-              step_duration_ms: stepDuration,
-              elapsed_time_ms: elapsed * 1000
-            }
-          });
-        }
+        // Track status changes for potential error reporting
+        // (No Sentry event sent here - only on final failure)
         
         previousStatus = kbStatus.status;
         lastStatusChangeTime = currentTime;
@@ -372,22 +360,7 @@ async function runKBTypeTest(
         
         console.log(chalk.green(`  [${kbType}/${scenario.name}] [KB:${kbId}] ✅ Training completed successfully (${kbStatus.status}) in ${totalTime}s`));
         
-        // Send Sentry event for complete training
-        if (sentryEnabled) {
-          Sentry.captureMessage('E2E Training Complete', {
-            level: 'info',
-            tags: {
-              kb_type: kbType,
-              scenario: scenario.name,
-              success: 'true',
-              final_status: kbStatus.status
-            },
-            extra: {
-              training_duration_ms: trainingDuration,
-              training_duration_seconds: Math.round(trainingDuration / 1000)
-            }
-          });
-        }
+        // Training completed successfully - performance metrics will be sent at the end if enabled
         
         break;
       } else if (kbStatus.status === 'UNPROCESSABLE') {
@@ -407,23 +380,7 @@ async function runKBTypeTest(
           console.log(chalk.green(`  [${kbType}/${scenario.name}] [KB:${kbId}] ✅ Training failed as expected with status UNPROCESSABLE: ${errorMsg}`));
           isTrainingComplete = true;
           
-          // Send Sentry event for expected failure
-          if (sentryEnabled) {
-            Sentry.captureMessage('E2E Training Expected Failure', {
-              level: 'info',
-              tags: {
-                kb_type: kbType,
-                scenario: scenario.name,
-                success: 'true',
-                expected_failure: 'true'
-              },
-              extra: {
-                training_duration_ms: trainingDuration,
-                training_duration_seconds: Math.round(trainingDuration / 1000),
-                error_message: errorMsg
-              }
-            });
-          }
+          // Expected failure - performance metrics will be sent at the end if enabled
           
           break;
         }
@@ -432,7 +389,7 @@ async function runKBTypeTest(
         console.log(chalk.red(`  [${kbType}/${scenario.name}] [KB:${kbId}] ❌ Training failed with status UNPROCESSABLE: ${errorMsg}`));
         
         // Send Sentry event for failed training
-        if (sentryEnabled) {
+        if (sentryConfig.dsn && sentryConfig.sendErrors) {
           Sentry.captureMessage('E2E Training Failed', {
             level: 'error',
             tags: {
@@ -444,7 +401,10 @@ async function runKBTypeTest(
             extra: {
               training_duration_ms: trainingDuration,
               training_duration_seconds: Math.round(trainingDuration / 1000),
-              error_message: errorMsg
+              error_message: errorMsg,
+              kb_id: kbId,
+              test_run_id: testRunId,
+              timeout_ms: timeoutMs
             }
           });
         }
@@ -459,7 +419,7 @@ async function runKBTypeTest(
         console.log(chalk.red(`  [${kbType}/${scenario.name}] [KB:${kbId}] ❌ Training failed with status SYNC_ERROR: ${errorMsg}`));
         
         // Send Sentry event for sync error
-        if (sentryEnabled) {
+        if (sentryConfig.dsn && sentryConfig.sendErrors) {
           Sentry.captureMessage('E2E Training Sync Error', {
             level: 'error',
             tags: {
@@ -471,7 +431,10 @@ async function runKBTypeTest(
             extra: {
               training_duration_ms: trainingDuration,
               training_duration_seconds: Math.round(trainingDuration / 1000),
-              error_message: errorMsg
+              error_message: errorMsg,
+              kb_id: kbId,
+              test_run_id: testRunId,
+              timeout_ms: timeoutMs
             }
           });
         }
@@ -485,7 +448,7 @@ async function runKBTypeTest(
     
     if (!isTrainingComplete) {
       // Send Sentry event for timeout
-      if (sentryEnabled) {
+      if (sentryConfig.dsn && sentryConfig.sendErrors) {
         const currentTime = Date.now();
         const trainingDuration = currentTime - trainingStartTime;
         
@@ -493,13 +456,17 @@ async function runKBTypeTest(
           level: 'error',
           tags: {
             kb_type: kbType,
+            scenario: scenario.name,
             success: 'false',
             failure_reason: 'timeout'
           },
           extra: {
             training_duration_ms: trainingDuration,
             training_duration_seconds: Math.round(trainingDuration / 1000),
-            timeout_seconds: timeoutMs / 1000
+            timeout_seconds: timeoutMs / 1000,
+            kb_id: kbId,
+            test_run_id: testRunId,
+            last_status: previousStatus
           }
         });
       }
@@ -516,19 +483,23 @@ async function runKBTypeTest(
       }
       const totalDuration = Date.now() - startTime;
       
-      // Add total_duration_ms info to Sentry
-      if (sentryEnabled) {
-        Sentry.addBreadcrumb({
-          message: 'E2E Training Total Duration',
-          category: 'e2e_performance',
+      // Send performance metrics for successful test
+      if (sentryConfig.dsn && sentryConfig.sendPerformanceMetrics) {
+        Sentry.captureMessage('E2E Performance Metrics', {
           level: 'info',
-          data: {
+          tags: {
             kb_type: kbType,
             scenario: scenario.name,
-            success: true,
+            success: 'true',
+            chat_verification: 'skipped'
+          },
+          extra: {
             total_duration_ms: totalDuration,
             total_duration_seconds: Math.round(totalDuration / 1000),
-            chat_verification: 'skipped'
+            training_duration_ms: Date.now() - trainingStartTime,
+            training_duration_seconds: Math.round((Date.now() - trainingStartTime) / 1000),
+            kb_id: kbId,
+            test_run_id: testRunId
           }
         });
       }
@@ -600,18 +571,23 @@ async function runKBTypeTest(
       console.log(chalk.green(`  [${kbType}/${scenario.name}] [KB:${kbId}] ✅ Chat verification passed`));
       const totalDuration = Date.now() - startTime;
       
-      // Add total_duration_ms info to Sentry
-      if (sentryEnabled) {
-        Sentry.addBreadcrumb({
-          message: 'E2E Training Total Duration',
-          category: 'e2e_performance',
+      // Send performance metrics for successful test
+      if (sentryConfig.dsn && sentryConfig.sendPerformanceMetrics) {
+        Sentry.captureMessage('E2E Performance Metrics', {
           level: 'info',
-          data: {
+          tags: {
             kb_type: kbType,
-            success: true,
+            scenario: scenario.name,
+            success: 'true',
+            chat_verification: 'passed'
+          },
+          extra: {
             total_duration_ms: totalDuration,
             total_duration_seconds: Math.round(totalDuration / 1000),
-            chat_verification: 'passed'
+            training_duration_ms: Date.now() - trainingStartTime,
+            training_duration_seconds: Math.round((Date.now() - trainingStartTime) / 1000),
+            kb_id: kbId,
+            test_run_id: testRunId
           }
         });
       }
@@ -625,8 +601,8 @@ async function runKBTypeTest(
     } else {
       const totalDuration = Date.now() - startTime;
       
-      // Add total_duration_ms for failed chat verification
-      if (sentryEnabled) {
+      // Send error event for failed chat verification
+      if (sentryConfig.dsn && sentryConfig.sendErrors) {
         Sentry.captureMessage('E2E Training Chat Verification Failed', {
           level: 'error',
           tags: {
@@ -638,7 +614,12 @@ async function runKBTypeTest(
           extra: {
             total_duration_ms: totalDuration,
             total_duration_seconds: Math.round(totalDuration / 1000),
-            chat_verification: 'failed'
+            training_duration_ms: Date.now() - trainingStartTime,
+            training_duration_seconds: Math.round((Date.now() - trainingStartTime) / 1000),
+            chat_verification: 'failed',
+            kb_id: kbId,
+            test_run_id: testRunId,
+            timeout_ms: timeoutMs
           }
         });
       }
@@ -736,15 +717,26 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
     // Configure Sentry if DSN is provided
     const sentryDsn = options.sentryDsn || effectiveConfig.sentryDsn;
     const sentryEnvironment = options.sentryEnvironment || effectiveConfig.sentryEnvironment || 'unspecified';
-    const sentryEnabled = !!sentryDsn;
+    const sentrySendErrors = options.sentrySendErrors || false;
+    const sentrySendPerformanceMetrics = options.sentrySendPerformanceMetrics || false;
     
-    if (sentryEnabled) {
+    const sentryConfig = {
+      dsn: sentryDsn,
+      environment: sentryEnvironment,
+      sendErrors: sentrySendErrors,
+      sendPerformanceMetrics: sentrySendPerformanceMetrics
+    };
+    
+    if (sentryDsn && (sentrySendErrors || sentrySendPerformanceMetrics)) {
       Sentry.init({
         dsn: sentryDsn,
         environment: sentryEnvironment,
         tracesSampleRate: 1.0,
       });
-      console.log(chalk.gray(`📊 Sentry initialized (environment: ${sentryEnvironment})`));
+      const features = [];
+      if (sentrySendErrors) features.push('errors');
+      if (sentrySendPerformanceMetrics) features.push('performance');
+      console.log(chalk.gray(`📊 Sentry initialized (environment: ${sentryEnvironment}, features: ${features.join(', ')})`));
     }
     
     // Configure API authentication
@@ -853,7 +845,7 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
         
         // Create all test tasks - they start executing immediately
         const testTasks = allTests.map(({ kbType, scenario }) => 
-          runKBTypeTest(kbType, scenario, userId, testRunId, timeoutMs, options.skipChatVerification || false, sentryEnabled)
+          runKBTypeTest(kbType, scenario, userId, testRunId, timeoutMs, options.skipChatVerification || false, sentryConfig)
         );
         
         // Wait for all tests to complete
@@ -883,7 +875,7 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
         // Sequential mode
         for (const { kbType, scenario } of allTests) {
           try {
-            const result = await runKBTypeTest(kbType, scenario, userId, testRunId, timeoutMs, options.skipChatVerification || false, sentryEnabled);
+            const result = await runKBTypeTest(kbType, scenario, userId, testRunId, timeoutMs, options.skipChatVerification || false, sentryConfig);
             results.push(result);
           } catch (error: any) {
             results.push({
@@ -957,8 +949,10 @@ export function setupE2ECommand(program: Command): void {
     .option('--kb-types <types>', 'comma-separated list of KB types to test (text,file,website,youtube)')
     .option('--parallel', 'run KB type tests in parallel')
     .option('--skip-chat-verification', 'skip chat verification after training')
-    .option('--sentry-dsn <dsn>', 'Sentry DSN for performance metrics')
+    .option('--sentry-dsn <dsn>', 'Sentry DSN for error reporting and performance metrics')
     .option('--sentry-environment <env>', 'Sentry environment (defaults to "unspecified")')
+    .option('--sentry-send-errors', 'send error events to Sentry when tests fail')
+    .option('--sentry-send-performance-metrics', 'send performance metrics to Sentry for passing tests')
     .option('--pre-cleanup', 'delete all users in the organization before running tests')
     .action((options) => {
       const globalOptions = program.opts();
