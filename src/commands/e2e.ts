@@ -22,6 +22,7 @@ interface E2EOptions {
   preCleanup?: boolean;
   sentrySendErrors?: boolean;
   sentrySendPerformanceMetrics?: boolean;
+  simulateFailure?: boolean;
 }
 
 interface KBTestScenario {
@@ -135,7 +136,8 @@ async function runKBTypeTest(
   testRunId: string, 
   timeoutMs: number,
   skipChatVerification: boolean,
-  sentryConfig: { dsn?: string; environment?: string; sendErrors: boolean; sendPerformanceMetrics: boolean } = { sendErrors: false, sendPerformanceMetrics: false }
+  sentryConfig: { dsn?: string; environment?: string; sendErrors: boolean; sendPerformanceMetrics: boolean } = { sendErrors: false, sendPerformanceMetrics: false },
+  simulateFailure: boolean = false
 ): Promise<TestResult> {
   const startTime = Date.now();
   let trainingStartTime = 0;
@@ -166,6 +168,34 @@ async function runKBTypeTest(
     
     const replicaUuid = replicaResponse.uuid!;
     console.log(chalk.gray(`[${kbType}/${scenario.name}] Replica created: ${replicaUuid}`));
+
+    // Simulate failure if requested
+    if (simulateFailure) {
+      console.log(chalk.yellow(`[${kbType}/${scenario.name}] 🧪 Simulating failure for Sentry testing...`));
+      
+      // Send error event to test Sentry integration
+      if (sentryConfig.dsn && sentryConfig.sendErrors) {
+        Sentry.captureMessage('E2E Training Simulated Failure', {
+          level: 'error',
+          tags: {
+            kb_type: kbType,
+            scenario: scenario.name,
+            success: 'false',
+            failure_reason: 'simulated'
+          },
+          extra: {
+            simulated_failure: true,
+            test_run_id: testRunId,
+            replica_uuid: replicaUuid,
+            timeout_ms: timeoutMs,
+            kb_type: kbType,
+            scenario: scenario.name
+          }
+        });
+      }
+      
+      throw new Error(`Simulated failure for testing Sentry integration`);
+    }
 
     // 2b: Train the replica based on KB type
     let trainingContent: string;
@@ -792,6 +822,10 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
     console.log(chalk.gray(`Timeout: ${timeoutMs / 1000}s`));
     console.log(chalk.gray(`KB Types: ${kbTypesToTest.join(', ')}`));
     
+    if (options.simulateFailure) {
+      console.log(chalk.yellow('⚠️  SIMULATE FAILURE MODE: All tests will fail for Sentry testing'));
+    }
+    
     // Count total scenarios
     let totalScenarios = 0;
     for (const kbType of kbTypesToTest) {
@@ -845,7 +879,7 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
         
         // Create all test tasks - they start executing immediately
         const testTasks = allTests.map(({ kbType, scenario }) => 
-          runKBTypeTest(kbType, scenario, userId, testRunId, timeoutMs, options.skipChatVerification || false, sentryConfig)
+          runKBTypeTest(kbType, scenario, userId, testRunId, timeoutMs, options.skipChatVerification || false, sentryConfig, options.simulateFailure || false)
         );
         
         // Wait for all tests to complete
@@ -875,7 +909,7 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
         // Sequential mode
         for (const { kbType, scenario } of allTests) {
           try {
-            const result = await runKBTypeTest(kbType, scenario, userId, testRunId, timeoutMs, options.skipChatVerification || false, sentryConfig);
+            const result = await runKBTypeTest(kbType, scenario, userId, testRunId, timeoutMs, options.skipChatVerification || false, sentryConfig, options.simulateFailure || false);
             results.push(result);
           } catch (error: any) {
             results.push({
@@ -953,6 +987,7 @@ export function setupE2ECommand(program: Command): void {
     .option('--sentry-environment <env>', 'Sentry environment (defaults to "unspecified")')
     .option('--sentry-send-errors', 'send error events to Sentry when tests fail')
     .option('--sentry-send-performance-metrics', 'send performance metrics to Sentry for passing tests')
+    .option('--simulate-failure', 'make all tests fail to test Sentry integration')
     .option('--pre-cleanup', 'delete all users in the organization before running tests')
     .action((options) => {
       const globalOptions = program.opts();
