@@ -349,6 +349,8 @@ async function runKBTypeTest(
           console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Text processing completed`));
         } else if (kbStatus.status === 'VECTOR_CREATED') {
           console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Vector embeddings created`));
+        } else if ((kbStatus.status as string) === 'SYNC_ERROR') {
+          console.log(chalk.red(`  [${kbType}/${scenario.name}] [KB:${kbId}] Sync error detected`));
         }
       } else if (pollCount % 3 === 0) {
         // Every 15 seconds (3 polls), show we're still waiting
@@ -448,6 +450,33 @@ async function runKBTypeTest(
         }
         
         throw new Error(`Training failed: ${errorMsg}`);
+      } else if ((kbStatus.status as string) === 'SYNC_ERROR') {
+        const errorMsg = kbStatus.error?.message || 'Unknown sync error';
+        const currentTime = Date.now();
+        const trainingDuration = currentTime - trainingStartTime;
+        
+        // SYNC_ERROR is always an unexpected failure
+        console.log(chalk.red(`  [${kbType}/${scenario.name}] [KB:${kbId}] ❌ Training failed with status SYNC_ERROR: ${errorMsg}`));
+        
+        // Send Sentry event for sync error
+        if (sentryEnabled) {
+          Sentry.captureMessage('E2E Training Sync Error', {
+            level: 'error',
+            tags: {
+              kb_type: kbType,
+              scenario: scenario.name,
+              success: 'false',
+              failure_reason: 'sync_error'
+            },
+            extra: {
+              training_duration_ms: trainingDuration,
+              training_duration_seconds: Math.round(trainingDuration / 1000),
+              error_message: errorMsg
+            }
+          });
+        }
+        
+        throw new Error(`Training sync error: ${errorMsg}`);
       }
       
       // Wait 5 seconds before checking again
