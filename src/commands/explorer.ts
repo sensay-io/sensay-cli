@@ -6,6 +6,8 @@ import { configureOpenAPI } from '../utils/openapi-config';
 
 interface ExplorerOptions {
   nonInteractive?: boolean;
+  verbose?: boolean;
+  veryVerbose?: boolean;
 }
 
 export async function explorerCommand(folderPath?: string, options: ExplorerOptions = {}): Promise<void> {
@@ -27,7 +29,11 @@ export async function explorerCommand(folderPath?: string, options: ExplorerOpti
     }
 
     // Configure the OpenAPI client
-    configureOpenAPI(effectiveConfig);
+    configureOpenAPI({ 
+      ...effectiveConfig, 
+      verbose: options.verbose, 
+      veryVerbose: options.veryVerbose 
+    });
 
     // Create and show the entity dialog in explorer mode
     const dialogOptions: EntityDialogOptions = {
@@ -63,7 +69,12 @@ export function setupExplorerCommand(program: Command): void {
     .description('Explore Sensay entities interactively')
     .action((folderPath, options) => {
       const globalOptions = program.opts();
-      return explorerCommand(folderPath, { ...options, nonInteractive: globalOptions.nonInteractive });
+      return explorerCommand(folderPath, { 
+        ...options, 
+        nonInteractive: globalOptions.nonInteractive,
+        verbose: globalOptions.verbose,
+        veryVerbose: globalOptions.veryVerbose
+      });
     });
 
   // Configure help in wget style for this command

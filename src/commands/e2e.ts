@@ -16,6 +16,8 @@ interface E2EOptions {
   kbTypes?: string;
   skipChatVerification?: boolean;
   parallel?: boolean;
+  verbose?: boolean;
+  veryVerbose?: boolean;
 }
 
 interface TestResult {
@@ -349,7 +351,12 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
     }
 
     // Configure OpenAPI client
-    configureOpenAPI({ ...effectiveConfig, apiKey });
+    configureOpenAPI({ 
+      ...effectiveConfig, 
+      apiKey,
+      verbose: options.verbose,
+      veryVerbose: options.veryVerbose
+    });
 
     // Parse timeout
     const timeoutMs = options.timeout ? parseInt(options.timeout) * 1000 : DEFAULT_TIMEOUT_MS;
@@ -415,7 +422,13 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
       }
       
       // Update OpenAPI headers with user ID
-      configureOpenAPI({ ...effectiveConfig, apiKey, userId });
+      configureOpenAPI({ 
+        ...effectiveConfig, 
+        apiKey, 
+        userId,
+        verbose: options.verbose,
+        veryVerbose: options.veryVerbose
+      });
       
       console.log(chalk.green(`✅ User created: ${userId}\n`));
 

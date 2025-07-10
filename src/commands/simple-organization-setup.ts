@@ -19,6 +19,8 @@ interface SetupOptions {
   replicaName?: string;
   nonInteractive?: boolean;
   force?: boolean;
+  verbose?: boolean;
+  veryVerbose?: boolean;
 }
 
 export async function simpleOrganizationSetupCommand(folderPath?: string, options: SetupOptions = {}): Promise<void> {
@@ -45,7 +47,11 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
     }
 
     // Configure the OpenAPI client
-    configureOpenAPI(effectiveConfig);
+    configureOpenAPI({ 
+      ...effectiveConfig, 
+      verbose: options.verbose, 
+      veryVerbose: options.veryVerbose 
+    });
 
     // Get or prompt for configuration values
     let { userName, userEmail, replicaName } = options;
@@ -347,7 +353,12 @@ export function setupSimpleOrganizationSetupCommand(program: Command): void {
     .option('-f, --force', 'skip confirmation before deleting existing training data')
     .action((folderPath, options) => {
       const globalOptions = program.opts();
-      return simpleOrganizationSetupCommand(folderPath, { ...options, nonInteractive: globalOptions.nonInteractive });
+      return simpleOrganizationSetupCommand(folderPath, { 
+        ...options, 
+        nonInteractive: globalOptions.nonInteractive,
+        verbose: globalOptions.verbose,
+        veryVerbose: globalOptions.veryVerbose
+      });
     });
 
   // Configure help in wget style for this command

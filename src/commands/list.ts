@@ -13,6 +13,8 @@ interface ListOptions {
   organization?: string;
   user?: string;
   replica?: string;
+  verbose?: boolean;
+  veryVerbose?: boolean;
 }
 
 export async function listCommand(options: ListOptions = {}): Promise<void> {
@@ -28,7 +30,11 @@ export async function listCommand(options: ListOptions = {}): Promise<void> {
     }
 
     // Configure the OpenAPI client
-    configureOpenAPI(effectiveConfig);
+    configureOpenAPI({ 
+      ...effectiveConfig, 
+      verbose: options.verbose, 
+      veryVerbose: options.veryVerbose 
+    });
 
     // Determine what to list based on options
     if (options.organization) {
@@ -329,7 +335,12 @@ export function setupListCommand(program: Command): void {
     .option('-u, --user <id>', 'list entities for specific user ID')
     .option('-r, --replica <id>', 'list entities for specific replica ID')
     .action((options) => {
-      return listCommand(options);
+      const globalOptions = program.opts();
+      return listCommand({ 
+        ...options, 
+        verbose: globalOptions.verbose, 
+        veryVerbose: globalOptions.veryVerbose 
+      });
     });
 
   // Configure help in wget style for this command

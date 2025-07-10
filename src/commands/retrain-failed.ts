@@ -14,6 +14,8 @@ interface RetrainFailedOptions {
   userId?: string;
   silent?: boolean;
   save?: boolean;
+  verbose?: boolean;
+  veryVerbose?: boolean;
 }
 
 // Status that indicates item cannot be retrained
@@ -34,7 +36,11 @@ export async function retrainFailedCommand(folderPath: string, options: RetrainF
     }
 
     // Configure OpenAPI client
-    configureOpenAPI(effectiveConfig);
+    configureOpenAPI({ 
+      ...effectiveConfig, 
+      verbose: options.verbose, 
+      veryVerbose: options.veryVerbose 
+    });
 
     // Handle replica selection
     let replicasToProcess: Array<{ uuid: string; name: string }> = [];
@@ -254,8 +260,13 @@ export function setupRetrainFailedCommand(program: Command) {
     .option('--userid <id>', 'User ID')
     .option('-s, --silent', 'Skip interactive prompts')
     .option('--save', 'Save configuration options to project')
-    .action(async (options: RetrainFailedOptions) => {
-      await retrainFailedCommand(process.cwd(), options);
+    .action(async (options) => {
+      const globalOptions = program.opts();
+      await retrainFailedCommand(process.cwd(), { 
+        ...options, 
+        verbose: globalOptions.verbose, 
+        veryVerbose: globalOptions.veryVerbose 
+      });
     });
 }
 
