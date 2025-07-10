@@ -73,6 +73,8 @@ export class ConfigManager {
       userId: process.env.SENSAY_USER_ID,
       baseUrl: process.env.SENSAY_BASE_URL,
       vercelProtectionBypass: process.env.SENSAY_VERCEL_PROTECTION_BYPASS,
+      sentryDsn: process.env.SENTRY_DSN,
+      sentryEnvironment: process.env.SENTRY_ENVIRONMENT,
     };
   }
 
