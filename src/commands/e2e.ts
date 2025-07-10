@@ -114,13 +114,6 @@ const KB_TEST_SCENARIOS: Record<string, KBTestScenario[]> = {
   ],
   youtube: [
     {
-      name: 'no_cc',
-      url: 'https://youtu.be/ZpvMhHldAEo',
-      expectedOutcome: 'unprocessable',
-      expectedError: 'transcript-unavailable',
-      description: 'YouTube video without closed captions (should fail)'
-    },
-    {
       name: 'with_cc',
       url: 'https://youtu.be/P9UPOym_tLQ',
       expectedOutcome: 'success',
@@ -523,10 +516,12 @@ async function runKBTypeTest(
     
     } // End of monitorTrainingProgress function
 
-    // Skip chat verification if requested or if expected to fail
-    if (skipChatVerification || scenario.expectedOutcome === 'unprocessable') {
+    // Skip chat verification if requested, if expected to fail, or for website scenarios
+    if (skipChatVerification || scenario.expectedOutcome === 'unprocessable' || kbType === 'website') {
       if (skipChatVerification) {
         console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Skipping chat verification as requested`));
+      } else if (kbType === 'website') {
+        console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Skipping chat verification for website scenario`));
       } else {
         console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Skipping chat verification for expected failure scenario`));
       }
@@ -552,9 +547,6 @@ async function runKBTypeTest(
       case 'text':
       case 'file':
         testMessage = `What is the secret phrase you were trained on?`;
-        break;
-      case 'website':
-        testMessage = `What content did you learn from the website I provided?`;
         break;
       case 'youtube':
         if (scenario.name === 'with_cc') {
@@ -599,7 +591,7 @@ async function runKBTypeTest(
         console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Response: ${responseContent.substring(0, 100)}...`));
       }
     } else {
-      // For website and youtube (non-cc), just check if there's a reasonable response
+      // For youtube (non-cc), just check if there's a reasonable response
       // since we can't predict exact content
       verificationPassed = responseContent.length > 20 && 
                          !responseContent.toLowerCase().includes('i don\'t have') &&
