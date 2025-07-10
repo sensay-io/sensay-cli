@@ -115,14 +115,14 @@ const KB_TEST_SCENARIOS: Record<string, KBTestScenario[]> = {
   youtube: [
     {
       name: 'no_cc',
-      url: 'https://www.youtube.com/watch?v=2vjPBrBU-TM',
+      url: 'https://youtu.be/ZpvMhHldAEo',
       expectedOutcome: 'unprocessable',
       expectedError: 'transcript-unavailable',
       description: 'YouTube video without closed captions (should fail)'
     },
     {
       name: 'with_cc',
-      url: 'https://www.youtube.com/watch?v=B3EzRAgjo_s',
+      url: 'https://youtu.be/P9UPOym_tLQ',
       expectedOutcome: 'success',
       description: 'YouTube video with closed captions (should succeed)'
     }
@@ -557,7 +557,11 @@ async function runKBTypeTest(
         testMessage = `What content did you learn from the website I provided?`;
         break;
       case 'youtube':
-        testMessage = `What did you learn from the YouTube video?`;
+        if (scenario.name === 'with_cc') {
+          testMessage = `What is the secret passphrase mentioned in the YouTube video?`;
+        } else {
+          testMessage = `What did you learn from the YouTube video?`;
+        }
         break;
       default:
         testMessage = `What information have you been trained on?`;
@@ -584,8 +588,18 @@ async function runKBTypeTest(
         console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Expected phrase: ${expectedPhrase}`));
         console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Response: ${responseContent.substring(0, 100)}...`));
       }
+    } else if (kbType === 'youtube' && scenario.name === 'with_cc') {
+      // For YouTube CC scenario, check for the specific passphrase
+      const expectedPhrase = 'ABRACADABRA61';
+      verificationPassed = responseContent.includes(expectedPhrase);
+      
+      if (!verificationPassed) {
+        console.log(chalk.red(`  [${kbType}/${scenario.name}] [KB:${kbId}] ❌ Chat verification failed`));
+        console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Expected phrase: ${expectedPhrase}`));
+        console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Response: ${responseContent.substring(0, 100)}...`));
+      }
     } else {
-      // For website and youtube, just check if there's a reasonable response
+      // For website and youtube (non-cc), just check if there's a reasonable response
       // since we can't predict exact content
       verificationPassed = responseContent.length > 20 && 
                          !responseContent.toLowerCase().includes('i don\'t have') &&
