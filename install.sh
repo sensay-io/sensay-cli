@@ -173,7 +173,7 @@ fi
 
 # Install dependencies
 print_color "$YELLOW" "\nInstalling dependencies..."
-if ! npm install --silent; then
+if ! npm install --production=false --silent; then
     print_color "$RED" "❌ Failed to install dependencies"
     exit 1
 fi
@@ -181,10 +181,17 @@ print_color "$GREEN" "✓ Dependencies installed"
 
 # Build the project
 print_color "$YELLOW" "\nBuilding Sensay CLI..."
+
+# First ensure TypeScript is available
+if ! command -v tsc >/dev/null 2>&1 && ! npx tsc --version >/dev/null 2>&1; then
+    print_color "$YELLOW" "TypeScript not found, installing..."
+    npm install typescript@5.8.3 --save-dev --legacy-peer-deps >/dev/null 2>&1
+fi
+
 if ! npm run build >/dev/null 2>&1; then
     print_color "$RED" "❌ Build failed"
     print_color "$YELLOW" "Trying to run TypeScript compiler directly..."
-    if ! npx tsc >/dev/null 2>&1; then
+    if ! npx -p typescript@5.8.3 tsc >/dev/null 2>&1; then
         print_color "$RED" "❌ TypeScript compilation failed"
         exit 1
     fi
