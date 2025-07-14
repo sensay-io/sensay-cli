@@ -178,12 +178,6 @@ function generateMarkdownReport(
   lines.push(`**Organization ID:** ${config.organizationId || 'Unknown'}`);
   lines.push('');
   
-  // Users Section
-  lines.push('## Users');
-  lines.push('');
-  lines.push('*Note: User listing requires user-level authentication. To include users in the report, please authenticate with a user ID using the --userid option.*');
-  lines.push('');
-  
   // Replicas Section
   lines.push('## Replicas');
   lines.push('');
