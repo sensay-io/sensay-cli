@@ -4,19 +4,19 @@ import { EntityDialog, EntityDialogOptions } from '../utils/entity-dialog';
 import { ConfigManager } from '../config/manager';
 import { configureOpenAPI } from '../utils/openapi-config';
 
-interface ExplorerOptions {
+interface ExploreOptions {
   nonInteractive?: boolean;
   verbose?: boolean;
   veryVerbose?: boolean;
 }
 
-export async function explorerCommand(folderPath?: string, options: ExplorerOptions = {}): Promise<void> {
+export async function exploreCommand(folderPath?: string, options: ExploreOptions = {}): Promise<void> {
   const targetPath = folderPath || '.';
 
   try {
     // Check for non-interactive mode
     if (options.nonInteractive) {
-      console.error(chalk.red('❌ Explorer command is not available in non-interactive mode'));
+      console.error(chalk.red('❌ Explore command is not available in non-interactive mode'));
       process.exit(1);
     }
 
@@ -46,11 +46,11 @@ export async function explorerCommand(folderPath?: string, options: ExplorerOpti
     if (result) {
       console.log(chalk.green(`\n✓ Explored ${result.type}: ${result.name}`));
     } else {
-      console.log(chalk.blue('\n👋 Explorer closed.'));
+      console.log(chalk.blue('\n👋 Explore closed.'));
     }
 
   } catch (error: any) {
-    console.error(chalk.red('\n❌ Explorer failed:'));
+    console.error(chalk.red('\n❌ Explore failed:'));
     console.error(chalk.red(`Error: ${error.message || error}`));
     
     if (process.env.NODE_ENV !== 'test') {
@@ -61,15 +61,15 @@ export async function explorerCommand(folderPath?: string, options: ExplorerOpti
   }
 }
 
-export function setupExplorerCommand(program: Command): void {
+export function setupExploreCommand(program: Command): void {
   // Add the main command
   const cmd = program
-    .command('explorer [folder-path]')
+    .command('explore [folder-path]')
     .alias('x')
     .description('Explore Sensay entities interactively')
     .action((folderPath, options) => {
       const globalOptions = program.opts();
-      return explorerCommand(folderPath, { 
+      return exploreCommand(folderPath, { 
         ...options, 
         nonInteractive: globalOptions.nonInteractive,
         verbose: globalOptions.verbose,
@@ -82,7 +82,7 @@ export function setupExplorerCommand(program: Command): void {
     formatHelp: (cmd, helper) => {
       const termWidth = helper.padWidth(cmd, helper);
       
-      let str = `Sensay CLI 1.0.1 - Entity Explorer
+      let str = `Sensay CLI 1.0.1 - Entity Explore
 Usage: ${helper.commandUsage(cmd)}
 
 Explore Sensay entities (Organizations, Users, Replicas) in an interactive
@@ -93,17 +93,17 @@ Navigation:
   Enter         Select/Navigate deeper
   .             View entity details  
   r             Refresh current list
-  q             Exit explorer
+  q             Exit explore
   
-The explorer shows entities in a hierarchical view:
+The explore shows entities in a hierarchical view:
   Organizations → Users → Replicas
 
 This command is only available in interactive mode.
 
 Examples:
-  sensay explorer
+  sensay explore
   sensay x
-  sensay explorer ./my-project`;
+  sensay explore ./my-project`;
 
       return str;
     }

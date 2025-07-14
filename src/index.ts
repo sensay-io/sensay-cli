@@ -10,7 +10,8 @@ import { setupConversationsCommand } from './commands/conversations';
 import { setupRetrainFailedCommand } from './commands/retrain-failed';
 import { setupHashKeyCommand } from './commands/hash-key';
 import { setupE2ECommand } from './commands/e2e';
-import { setupExplorerCommand } from './commands/explorer';
+import { setupExploreCommand } from './commands/explore';
+import { setupReportCommand } from './commands/report';
 
 const program = new Command();
 
@@ -38,7 +39,8 @@ setupConversationsCommand(program);
 setupRetrainFailedCommand(program);
 setupHashKeyCommand(program);
 setupE2ECommand(program);
-setupExplorerCommand(program);
+setupExploreCommand(program);
+setupReportCommand(program);
 
 // Hidden help command (undocumented) that triggers --help
 program
@@ -106,7 +108,8 @@ const startInteractiveMode = async () => {
       { name: '🚀 Simple Organization Setup', value: 'setup' },
       { name: '💬 Chat with Replica', value: 'chat' },
       { name: '📊 List Entities', value: 'list' },
-      { name: '🔍 Explorer', value: 'explorer' },
+      { name: '🔍 Explore', value: 'explore' },
+      { name: '📊 Generate Report', value: 'report' },
       { name: '🗣️ Query Conversations', value: 'conversations' },
       { name: '🔄 Retrain Failed Items', value: 'retrain-failed' },
       { name: '🧪 Run E2E Tests', value: 'e2e' },
@@ -177,9 +180,23 @@ const startInteractiveMode = async () => {
       await e2eCommand({});
       break;
     }
-    case 'explorer': {
-      const { explorerCommand } = await import('./commands/explorer');
-      await explorerCommand();
+    case 'explore': {
+      const { exploreCommand } = await import('./commands/explore');
+      await exploreCommand();
+      break;
+    }
+    case 'report': {
+      // Ask for working folder path first
+      const { folderPath } = await inquirer.default.prompt({
+        type: 'input',
+        name: 'folderPath',
+        message: 'Working folder path for your project:',
+        default: '.',
+        validate: (input: string) => input.trim().length > 0 || 'Folder path is required'
+      });
+      
+      const { reportCommand } = await import('./commands/report');
+      await reportCommand(folderPath.trim());
       break;
     }
     case 'exit':
