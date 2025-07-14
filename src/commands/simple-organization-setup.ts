@@ -243,9 +243,11 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
           replica = await ReplicasService.getV1Replicas1(existingReplica.uuid);
           replicaSpinner.succeed(`Updated existing replica: ${replica.name} (model: ${replicaFolder.modelName})`);
         } else {
-          // Create new replica with folder name as slug
+          // Create new replica with random slug to avoid conflicts
           replicaSpinner.text = `Creating new replica: ${replicaFolder.name}...`;
-          const slug = replicaFolder.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+          const randomSuffix = Math.random().toString(36).substr(2, 9);
+          const baseSlug = replicaFolder.name.toLowerCase().replace(/[^a-z0-9]/g, '-') || 'replica';
+          const slug = `${baseSlug}-${randomSuffix}`;
           
           const replicaCreateResponse = await ReplicasService.postV1Replicas('2025-03-25', { 
             name: replicaFolder.name,
