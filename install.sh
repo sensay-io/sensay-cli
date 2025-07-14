@@ -210,6 +210,9 @@ if ! npm run build >/dev/null 2>&1; then
 fi
 print_color "$GREEN" "✓ Build completed"
 
+# Ensure the built file is executable
+chmod +x "$INSTALL_DIR/dist/src/index.js" 2>/dev/null || true
+
 # Handle global installation
 if [ "$NON_INTERACTIVE" = false ]; then
     print_color "$YELLOW" "\nWould you like to install Sensay CLI globally?"
@@ -236,14 +239,8 @@ if [ "$GLOBAL_INSTALL" = "yes" ]; then
         # Alternative: create a symlink manually
         SENSAY_BIN="/usr/local/bin/sensay"
         if sudo ln -sf "$INSTALL_DIR/dist/src/index.js" "$SENSAY_BIN" 2>/dev/null; then
-            # Make it executable
-            sudo chmod +x "$SENSAY_BIN"
-            
-            # Create wrapper script
-            sudo tee "$SENSAY_BIN" > /dev/null << EOF
-#!/usr/bin/env node
-require('$INSTALL_DIR/dist/src/index.js');
-EOF
+            # Make it executable (both the source and the symlink)
+            chmod +x "$INSTALL_DIR/dist/src/index.js" 2>/dev/null || true
             sudo chmod +x "$SENSAY_BIN"
             print_color "$GREEN" "✓ Global installation successful (manual symlink)"
             GLOBAL_INSTALLED=true
@@ -262,11 +259,10 @@ print_color "$YELLOW" "\nCreating convenience scripts..."
 # Create bin directory for PATH-based execution
 mkdir -p "$INSTALL_DIR/bin"
 
-# Create main sensay executable in bin directory
-cat > "$INSTALL_DIR/bin/sensay" << EOF
-#!/usr/bin/env node
-require('$INSTALL_DIR/dist/src/index.js');
-EOF
+# Create main sensay executable in bin directory as a symlink
+ln -sf "$INSTALL_DIR/dist/src/index.js" "$INSTALL_DIR/bin/sensay"
+# Ensure the source file is executable
+chmod +x "$INSTALL_DIR/dist/src/index.js" 2>/dev/null || true
 chmod +x "$INSTALL_DIR/bin/sensay"
 
 # Create run.sh for local execution
