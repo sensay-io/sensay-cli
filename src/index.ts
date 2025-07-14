@@ -24,7 +24,8 @@ program
   .usage('[command] [options]');
 
 program
-  .option('-v, --verbose', 'Enable verbose output')
+  .option('-v, --verbose', 'Enable verbose output (shows API requests METHOD, URL, and response status)')
+  .option('-vv, --very-verbose', 'Enable very verbose output (shows full request/response including headers and body)')
   .option('--no-color', 'Disable colored output')
   .option('--non-interactive', 'Disable interactive mode (for scripts/CI)');
 

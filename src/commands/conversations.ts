@@ -16,6 +16,8 @@ interface ConversationsOptions {
   mentionsOnly?: boolean;
   limit?: number;
   nonInteractive?: boolean;
+  verbose?: boolean;
+  veryVerbose?: boolean;
 }
 
 export async function conversationsCommand(options: ConversationsOptions = {}): Promise<void> {
@@ -29,7 +31,11 @@ export async function conversationsCommand(options: ConversationsOptions = {}): 
     }
 
     // Configure the OpenAPI client
-    configureOpenAPI(effectiveConfig);
+    configureOpenAPI({ 
+      ...effectiveConfig, 
+      verbose: options.verbose, 
+      veryVerbose: options.veryVerbose 
+    });
 
     // Get replica ID from options or config
     let replicaId = options.replicaId;
@@ -262,7 +268,12 @@ export function setupConversationsCommand(program: Command): void {
     .option('-m, --mentions-only', 'show only mentions, requires conversation-id')
     .option('-l, --limit <number>', 'limit number of results (default: 50)', parseInt)
     .action((options) => {
-      return conversationsCommand(options);
+      const globalOptions = program.opts();
+      return conversationsCommand({ 
+        ...options, 
+        verbose: globalOptions.verbose, 
+        veryVerbose: globalOptions.veryVerbose 
+      });
     });
 
   // Configure help in wget style for this command

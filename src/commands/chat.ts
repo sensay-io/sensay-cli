@@ -9,6 +9,8 @@ interface ChatOptions {
   replicaName?: string;
   message?: string;
   nonInteractive?: boolean;
+  verbose?: boolean;
+  veryVerbose?: boolean;
 }
 
 export async function chatCommand(folderPath?: string, options: ChatOptions = {}): Promise<void> {
@@ -29,7 +31,11 @@ export async function chatCommand(folderPath?: string, options: ChatOptions = {}
     }
 
     // Configure the OpenAPI client
-    configureOpenAPI(effectiveConfig);
+    configureOpenAPI({ 
+      ...effectiveConfig, 
+      verbose: options.verbose, 
+      veryVerbose: options.veryVerbose 
+    });
 
     // Get replica name following standard priority pattern
     let { replicaName, message } = options;
