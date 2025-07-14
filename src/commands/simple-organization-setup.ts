@@ -195,6 +195,17 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
       userId: user.id,
     }, targetPath);
 
+    // First, fetch all existing replicas to check for name matches
+    const existingReplicasSpinner = progress.createSpinner('fetch-replicas', 'Fetching existing replicas...');
+    let existingReplicas: any[] = [];
+    try {
+      const replicasResponse = await ReplicasService.getV1Replicas();
+      existingReplicas = replicasResponse.items || [];
+      existingReplicasSpinner.succeed(`Found ${existingReplicas.length} existing replicas`);
+    } catch (error) {
+      existingReplicasSpinner.warn('Could not fetch existing replicas');
+    }
+
     // Process each replica folder
     const processedReplicas: any[] = [];
     const failedReplicas: any[] = [];
@@ -205,38 +216,22 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
       console.log(chalk.blue(`\n🤖 Processing replica ${i + 1}/${replicaFolders.length}: ${replicaFolder.name}\n`));
       
       try {
-        // Step 2: Create or update replica
-        const replicaSpinner = progress.createSpinner(`replica-${i}`, `Creating/updating replica: ${replicaFolder.name}...`);
-        
-        // Create replica with unique slug
-        const uniqueSlug = `${replicaFolder.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Math.random().toString(36).substr(2, 9)}`;
-        const replicaCreateResponse = await ReplicasService.postV1Replicas('2025-03-25', { 
-          name: replicaFolder.name,
-          shortDescription: `AI replica for ${replicaFolder.name}`,
-          greeting: 'Hello! How can I help you today?',
-          ownerID: user.id,
-          slug: uniqueSlug,
-          llm: {
-            model: replicaFolder.modelName as any || 'claude-3-5-haiku-latest',
-            memoryMode: 'rag-search',
-            systemMessage: replicaFolder.systemMessage || 'You are a helpful AI assistant.',
-            tools: []
-          }
-        });
+        // Step 2: Check if replica already exists by name
+        const replicaSpinner = progress.createSpinner(`replica-${i}`, `Checking for existing replica: ${replicaFolder.name}...`);
         
         let replica;
-        if (replicaCreateResponse.success && replicaCreateResponse.uuid) {
-          // Get the full replica details
-          replica = await ReplicasService.getV1Replicas1(replicaCreateResponse.uuid);
-          replicaSpinner.text = 'Updating replica settings...';
+        const existingReplica = existingReplicas.find(r => r.name === replicaFolder.name);
+        
+        if (existingReplica) {
+          // Replica exists, update it
+          replicaSpinner.text = `Updating existing replica: ${replicaFolder.name}...`;
           
-          // Update replica with PUT to ensure all settings are correct
-          await ReplicasService.putV1Replicas(replicaCreateResponse.uuid, '2025-03-25', {
+          await ReplicasService.putV1Replicas(existingReplica.uuid, '2025-03-25', {
             name: replicaFolder.name,
-            shortDescription: `AI replica for ${replicaFolder.name}`,
-            greeting: 'Hello! How can I help you today?',
+            shortDescription: existingReplica.shortDescription || `AI replica for ${replicaFolder.name}`,
+            greeting: existingReplica.greeting || 'Hello! How can I help you today?',
             ownerID: user.id,
-            slug: replica.slug, // Keep the generated slug
+            slug: existingReplica.slug, // Keep the existing slug
             llm: {
               model: replicaFolder.modelName as any || 'claude-3-5-haiku-latest',
               memoryMode: 'rag-search',
@@ -245,9 +240,33 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
             }
           });
           
-          replicaSpinner.succeed(`Replica created: ${replica.name} (model: ${replicaFolder.modelName})`);
+          replica = await ReplicasService.getV1Replicas1(existingReplica.uuid);
+          replicaSpinner.succeed(`Updated existing replica: ${replica.name} (model: ${replicaFolder.modelName})`);
         } else {
-          throw new Error('Failed to create replica');
+          // Create new replica with folder name as slug
+          replicaSpinner.text = `Creating new replica: ${replicaFolder.name}...`;
+          const slug = replicaFolder.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+          
+          const replicaCreateResponse = await ReplicasService.postV1Replicas('2025-03-25', { 
+            name: replicaFolder.name,
+            shortDescription: `AI replica for ${replicaFolder.name}`,
+            greeting: 'Hello! How can I help you today?',
+            ownerID: user.id,
+            slug: slug,
+            llm: {
+              model: replicaFolder.modelName as any || 'claude-3-5-haiku-latest',
+              memoryMode: 'rag-search',
+              systemMessage: replicaFolder.systemMessage || 'You are a helpful AI assistant.',
+              tools: []
+            }
+          });
+          
+          if (replicaCreateResponse.success && replicaCreateResponse.uuid) {
+            replica = await ReplicasService.getV1Replicas1(replicaCreateResponse.uuid);
+            replicaSpinner.succeed(`Created new replica: ${replica.name} (model: ${replicaFolder.modelName})`);
+          } else {
+            throw new Error('Failed to create replica');
+          }
         }
 
         // Step 3: Process training data for this replica
