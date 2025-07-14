@@ -474,7 +474,7 @@ export class FileProcessor {
         });
         
         // Create compact status display with priorities (most important statuses first)
-        const statusPriority = ['ERR_FILE_PROCESSING', 'ERR_TEXT_PROCESSING', 'ERR_TEXT_TO_VECTOR', 'SYNC_ERROR', 'PROCESSING', 'READY', 'AWAITING_UPLOAD', 'SUPABASE_ONLY', 'BLANK'];
+        const statusPriority = ['ERR_FILE_PROCESSING', 'ERR_TEXT_PROCESSING', 'ERR_TEXT_TO_VECTOR', 'SYNC_ERROR', 'PROCESSING', 'READY', 'VECTOR_CREATED', 'AWAITING_UPLOAD', 'SUPABASE_ONLY', 'BLANK'];
         const statusDisplay = statusPriority
           .filter(status => statusCounts[status] > 0)
           .map(status => `${status}: ${statusCounts[status]}`)
@@ -502,11 +502,13 @@ export class FileProcessor {
         }
         
         const readyCount = statusCounts['READY'] || 0;
+        const vectorCreatedCount = statusCounts['VECTOR_CREATED'] || 0;
+        const completedCount = readyCount + vectorCreatedCount;
         const errorCount = Object.entries(statusCounts)
           .filter(([status]) => status.startsWith('ERR_') || status === 'SYNC_ERROR')
           .reduce((sum, [, count]) => sum + count, 0);
         
-        if (readyCount === successfulUploads.length) {
+        if (completedCount === successfulUploads.length) {
           allReady = true;
           spinner.succeed(chalk.green(`✅ All ${successfulUploads.length} files have been processed and are ready!`));
         } else if (errorCount > 0) {
@@ -531,7 +533,7 @@ export class FileProcessor {
             .sort(([a], [b]) => a.localeCompare(b))
             .forEach(([status, count]) => {
               let color = chalk.gray;
-              if (status === 'READY') color = chalk.green;
+              if (status === 'READY' || status === 'VECTOR_CREATED') color = chalk.green;
               else if (status === 'PROCESSING') color = chalk.blue;
               else if (status.startsWith('ERR_') || status === 'SYNC_ERROR') color = chalk.red;
               else if (status === 'AWAITING_UPLOAD' || status === 'SUPABASE_ONLY') color = chalk.yellow;
