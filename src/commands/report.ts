@@ -5,7 +5,7 @@ import * as path from 'path';
 import { ConfigManager } from '../config/manager';
 import { configureOpenAPI } from '../utils/openapi-config';
 import inquirer from 'inquirer';
-import { UsersService, ReplicasService, TrainingService, KnowledgeBaseService } from '../generated/index';
+import { ApiError, UsersService, ReplicasService, TrainingService, KnowledgeBaseService } from '../generated/index';
 import { ProgressManager } from '../utils/progress';
 
 interface ReportOptions {
@@ -117,20 +117,47 @@ export async function reportCommand(folderPath?: string, options: ReportOptions 
   } catch (error: any) {
     console.error(chalk.red('\n❌ Report generation failed:'));
     
-    if (error.status) {
+    if (error instanceof ApiError) {
       console.error(chalk.red(`Status: ${error.status}`));
-    }
-    
-    console.error(chalk.red(`Error: ${error.message || error}`));
-    
-    if (error.body) {
-      const body = error.body as any;
-      if (body.request_id) {
-        console.error(chalk.red(`Request ID: ${body.request_id}`));
+      console.error(chalk.red(`Error: ${error.message}`));
+      
+      if (error.body) {
+        const body = error.body as any;
+        if (body.request_id) {
+          console.error(chalk.red(`Request ID: ${body.request_id}`));
+        }
+        if (body.fingerprint) {
+          console.error(chalk.red(`Fingerprint: ${body.fingerprint}`));
+        }
+        if (body.detail) {
+          console.error(chalk.red(`Detail: ${body.detail}`));
+        }
+        if (body.error) {
+          console.error(chalk.red(`API Error: ${body.error}`));
+        }
+        if (body.message) {
+          console.error(chalk.red(`Message: ${body.message}`));
+        }
       }
-      if (body.fingerprint) {
-        console.error(chalk.red(`Fingerprint: ${body.fingerprint}`));
+      
+      // Log request details in verbose mode
+      if (options.verbose || options.veryVerbose) {
+        console.error(chalk.gray('\nRequest details:'));
+        console.error(chalk.gray(`URL: ${error.url}`));
+        console.error(chalk.gray(`Method: ${error.request.method}`));
+        if (error.request.headers) {
+          console.error(chalk.gray('Headers:'));
+          Object.entries(error.request.headers).forEach(([key, value]) => {
+            if (key.toLowerCase().includes('secret') || key.toLowerCase().includes('key')) {
+              console.error(chalk.gray(`  ${key}: [REDACTED]`));
+            } else {
+              console.error(chalk.gray(`  ${key}: ${value}`));
+            }
+          });
+        }
       }
+    } else {
+      console.error(chalk.red(`Error: ${error.message || error}`));
     }
     
     if (process.env.NODE_ENV !== 'test') {
