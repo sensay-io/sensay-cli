@@ -198,6 +198,7 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
     // Process each replica folder
     const processedReplicas: any[] = [];
     const failedReplicas: any[] = [];
+    const allUploadResults: Array<{ replicaUuid: string; replicaName: string; uploadResults: any[]; totalFiles: number }> = [];
     
     for (let i = 0; i < replicaFolders.length; i++) {
       const replicaFolder = replicaFolders[i];
@@ -251,6 +252,7 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
 
         // Step 3: Process training data for this replica
         const { files, skipped } = await FileProcessor.scanTrainingFiles(replicaFolder.path);
+        let uploadResults: any[] = [];
         
         // Always clear existing training data first (even if no new files to upload)
         try {
@@ -274,7 +276,6 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
 
           // Upload training data
           const trainingSpinner = progress.createSpinner(`training-${i}`, 'Uploading training data...');
-          let uploadResults: any[] = [];
           
           try {
             uploadResults = await FileProcessor.uploadTrainingFiles(replica.uuid, files, trainingSpinner);
@@ -297,13 +298,14 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
             console.log(chalk.yellow('⚠️  Some training files may not have uploaded successfully'));
           }
 
-          // Poll training status (separate from upload error handling)
+          // Store upload results for batch monitoring later
           if (uploadResults.length > 0 && uploadResults.some(r => r.success)) {
-            try {
-              await FileProcessor.pollTrainingStatus(replica.uuid, uploadResults, files.length);
-            } catch (error: any) {
-              console.log(chalk.yellow(`⚠️  Training status monitoring ended with error: ${error.message}`));
-            }
+            allUploadResults.push({
+              replicaUuid: replica.uuid,
+              replicaName: replicaFolder.name,
+              uploadResults,
+              totalFiles: files.length
+            });
           }
         }
         
@@ -311,7 +313,8 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
           name: replicaFolder.name,
           uuid: replica.uuid,
           model: replicaFolder.modelName,
-          trainingFiles: files.length
+          trainingFiles: files.length,
+          uploadResults: uploadResults
         });
         
       } catch (error: any) {
@@ -340,6 +343,24 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
       failedReplicas.forEach(r => {
         console.log(chalk.red(`  - ${r.name}: ${r.error}`));
       });
+    }
+    
+    // Monitor training status for all replicas that had successful uploads
+    if (allUploadResults.length > 0) {
+      console.log(chalk.blue(`\n🔄 Monitoring training progress for all ${allUploadResults.length} replica${allUploadResults.length > 1 ? 's' : ''}...`));
+      
+      for (const replicaData of allUploadResults) {
+        console.log(chalk.cyan(`\n📊 Checking training status for ${replicaData.replicaName}...`));
+        try {
+          await FileProcessor.pollTrainingStatus(
+            replicaData.replicaUuid, 
+            replicaData.uploadResults, 
+            replicaData.totalFiles
+          );
+        } catch (error: any) {
+          console.log(chalk.yellow(`⚠️  Training status monitoring for ${replicaData.replicaName} ended with error: ${error.message}`));
+        }
+      }
     }
 
   } catch (error: any) {
