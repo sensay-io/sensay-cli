@@ -9,6 +9,7 @@ set -e  # Exit on error
 NON_INTERACTIVE=false
 INSTALL_DIR=""
 GLOBAL_INSTALL="yes"
+BRANCH="main"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -18,6 +19,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --install-dir|-d)
             INSTALL_DIR="$2"
+            shift 2
+            ;;
+        --branch|-b)
+            BRANCH="$2"
             shift 2
             ;;
         --no-global)
@@ -32,11 +37,12 @@ while [[ $# -gt 0 ]]; do
             echo "Options:"
             echo "  -n, --non-interactive    Run without prompts (uses defaults)"
             echo "  -d, --install-dir DIR    Installation directory (default: ~/.sensay)"
+            echo "  -b, --branch BRANCH      Git branch to install from (default: main)"
             echo "      --no-global          Skip global installation"
             echo "  -h, --help              Show this help message"
             echo ""
             echo "Examples:"
-            echo "  # Interactive installation"
+            echo "  # Interactive installation from main branch"
             echo "  curl -fsSL https://raw.githubusercontent.com/sensay-io/sensay-cli/main/install.sh | bash"
             echo ""
             echo "  # Non-interactive with defaults"
@@ -44,6 +50,12 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "  # Non-interactive with custom directory"
             echo "  curl -fsSL https://raw.githubusercontent.com/sensay-io/sensay-cli/main/install.sh | bash -s -- -n -d /opt/sensay"
+            echo ""
+            echo "  # Install from a specific branch"
+            echo "  curl -fsSL https://raw.githubusercontent.com/sensay-io/sensay-cli/main/install.sh | bash -s -- --branch develop"
+            echo ""
+            echo "  # Install from feature branch (download script from branch too)"
+            echo "  curl -fsSL https://raw.githubusercontent.com/sensay-io/sensay-cli/feature-xyz/install.sh | bash -s -- --branch feature-xyz"
             exit 0
             ;;
         *)
@@ -161,10 +173,10 @@ else
     fi
     
     # Clone repository
-    print_color "$YELLOW" "\nCloning Sensay CLI repository..."
-    if ! git clone https://github.com/sensay-io/sensay-cli.git "$INSTALL_DIR" 2>/dev/null; then
+    print_color "$YELLOW" "\nCloning Sensay CLI repository (branch: $BRANCH)..."
+    if ! git clone -b "$BRANCH" https://github.com/sensay-io/sensay-cli.git "$INSTALL_DIR" 2>/dev/null; then
         print_color "$RED" "❌ Failed to clone repository"
-        print_color "$YELLOW" "Please check your internet connection and try again"
+        print_color "$YELLOW" "Please check your internet connection and branch name"
         exit 1
     fi
     

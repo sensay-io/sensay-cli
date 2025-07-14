@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "Bash(node:*)",
+      "Bash(rm:*)"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "thinking",
+    "memory"
+  ]
+}
