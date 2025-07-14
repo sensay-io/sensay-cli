@@ -120,6 +120,12 @@ const KB_TEST_SCENARIOS: Record<string, KBTestScenario[]> = {
       url: 'https://youtu.be/P9UPOym_tLQ',
       expectedOutcome: 'success',
       description: 'YouTube video with closed captions (should succeed)'
+    },
+    {
+      name: 'without_cc',
+      url: 'https://youtube.com/shorts/paeptBU0Hf4?si=lc1WrTJgFabOWdRL',
+      expectedOutcome: 'success',
+      description: 'YouTube video without closed captions (should succeed)'
     }
   ]
 };
