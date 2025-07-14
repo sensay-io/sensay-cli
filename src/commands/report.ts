@@ -68,10 +68,6 @@ export async function reportCommand(folderPath?: string, options: ReportOptions 
     const mainSpinner = progress.createSpinner('report', 'Generating organization report...');
 
     try {
-      // Fetch user to get organization info
-      mainSpinner.text = 'Fetching user data...';
-      const user = await UsersService.getV1UsersMe();
-      
       // Fetch all entity data
       mainSpinner.text = 'Fetching replicas...';
       const replicasResponse = await ReplicasService.getV1Replicas();
@@ -96,7 +92,7 @@ export async function reportCommand(folderPath?: string, options: ReportOptions 
 
       // Generate the markdown report
       mainSpinner.text = 'Generating markdown report...';
-      const report = generateMarkdownReport(effectiveConfig, user, replicas, knowledgeBaseMap);
+      const report = generateMarkdownReport(effectiveConfig, replicas, knowledgeBaseMap);
 
       // Write the report to file
       mainSpinner.text = 'Writing report to file...';
@@ -170,7 +166,6 @@ export async function reportCommand(folderPath?: string, options: ReportOptions 
 
 function generateMarkdownReport(
   config: any,
-  user: any,
   replicas: any[],
   knowledgeBaseMap: Map<string, any[]>
 ): string {
@@ -186,18 +181,7 @@ function generateMarkdownReport(
   // Users Section
   lines.push('## Users');
   lines.push('');
-  
-  // Table header
-  lines.push('| Name | Email | User ID |');
-  lines.push('|------|-------|---------|');
-  
-  // Add current user
-  const userName = user.name || 'N/A';
-  const userEmail = user.email || 'N/A';
-  const userId = user.id || 'N/A';
-  
-  lines.push(`| ${userName} | ${userEmail} | ${userId} |`);
-  
+  lines.push('*Note: User listing requires user-level authentication. To include users in the report, please authenticate with a user ID using the --userid option.*');
   lines.push('');
   
   // Replicas Section
@@ -295,7 +279,6 @@ export function setupReportCommand(program: Command): void {
 Usage: ${helper.commandUsage(cmd)}
 
 Generate a comprehensive markdown report for your organization showing:
-  - All users with their details
   - All replicas with model information  
   - All knowledge base items with training status and filenames
 
