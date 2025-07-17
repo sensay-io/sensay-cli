@@ -1,9 +1,9 @@
-import * as fs from 'fs-extra';
-import * as path from 'path';
-import chalk from 'chalk';
-import { TrainingService, KnowledgeBaseService } from '../generated/index';
-import ora from 'ora';
-import inquirer from 'inquirer';
+import * as fs from "fs-extra";
+import * as path from "path";
+import chalk from "chalk";
+import { TrainingService, KnowledgeBaseService } from "../generated/index";
+import ora from "ora";
+import inquirer from "inquirer";
 
 export interface FileInfo {
   path: string;
@@ -21,43 +21,64 @@ export interface UploadResult {
 }
 
 export class FileProcessor {
-  private static readonly SUPPORTED_EXTENSIONS = ['.txt', '.md', '.json', '.csv', '.log', '.pdf', '.docx'];
+  private static readonly SUPPORTED_EXTENSIONS = [
+    ".txt",
+    ".md",
+    ".json",
+    ".csv",
+    ".log",
+    ".pdf",
+    ".docx",
+  ];
   private static readonly MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB (API limit)
-  private static readonly TEXT_EXTENSIONS = ['.txt', '.md', '.json', '.csv', '.log'];
-  private static readonly FILE_EXTENSIONS = ['.pdf', '.docx'];
+  private static readonly TEXT_EXTENSIONS = [
+    ".txt",
+    ".md",
+    ".json",
+    ".csv",
+    ".log",
+  ];
+  private static readonly FILE_EXTENSIONS = [".pdf", ".docx"];
 
   static async readSystemMessage(folderPath: string): Promise<string | null> {
-    const systemMessagePath = path.join(folderPath, 'system-message.txt');
-    
+    const systemMessagePath = path.join(folderPath, "system-message.txt");
+
     try {
       if (await fs.pathExists(systemMessagePath)) {
-        return await fs.readFile(systemMessagePath, 'utf-8');
+        return await fs.readFile(systemMessagePath, "utf-8");
       }
     } catch (error) {
       console.error(chalk.red(`Error reading system-message.txt: ${error}`));
     }
-    
+
     return null;
   }
 
-  static async scanTrainingFiles(folderPath: string): Promise<{ files: FileInfo[]; skipped: string[] }> {
-    const trainingDataPath = path.join(folderPath, 'training-data');
+  static async scanTrainingFiles(
+    folderPath: string
+  ): Promise<{ files: FileInfo[]; skipped: string[] }> {
+    const trainingDataPath = path.join(folderPath, "training-data");
     const files: FileInfo[] = [];
     const skipped: string[] = [];
 
-    if (!await fs.pathExists(trainingDataPath)) {
+    if (!(await fs.pathExists(trainingDataPath))) {
       return { files, skipped };
     }
 
-    await FileProcessor.scanDirectory(trainingDataPath, trainingDataPath, files, skipped);
-    
+    await FileProcessor.scanDirectory(
+      trainingDataPath,
+      trainingDataPath,
+      files,
+      skipped
+    );
+
     return { files, skipped };
   }
 
   private static async scanDirectory(
-    dirPath: string, 
-    basePath: string, 
-    files: FileInfo[], 
+    dirPath: string,
+    basePath: string,
+    files: FileInfo[],
     skipped: string[]
   ): Promise<void> {
     const entries = await fs.readdir(dirPath, { withFileTypes: true });
@@ -70,7 +91,7 @@ export class FileProcessor {
         await FileProcessor.scanDirectory(fullPath, basePath, files, skipped);
       } else if (entry.isFile()) {
         const ext = path.extname(entry.name).toLowerCase();
-        
+
         if (!FileProcessor.SUPPORTED_EXTENSIONS.includes(ext)) {
           skipped.push(relativePath);
           continue;
@@ -78,14 +99,18 @@ export class FileProcessor {
 
         try {
           const stats = await fs.stat(fullPath);
-          
+
           if (stats.size > FileProcessor.MAX_FILE_SIZE) {
-            skipped.push(`${relativePath} (too large: ${FileProcessor.formatFileSize(stats.size)})`);
+            skipped.push(
+              `${relativePath} (too large: ${FileProcessor.formatFileSize(
+                stats.size
+              )})`
+            );
             continue;
           }
 
-          const content = await fs.readFile(fullPath, 'utf-8');
-          
+          const content = await fs.readFile(fullPath, "utf-8");
+
           files.push({
             path: fullPath,
             relativePath,
@@ -100,7 +125,7 @@ export class FileProcessor {
   }
 
   static formatFileSize(bytes: number): string {
-    const units = ['B', 'KB', 'MB', 'GB'];
+    const units = ["B", "KB", "MB", "GB"];
     let size = bytes;
     let unitIndex = 0;
 
@@ -113,109 +138,146 @@ export class FileProcessor {
   }
 
   static displayFilesSummary(files: FileInfo[], skipped: string[]): void {
-    console.log(chalk.blue('\n📁 File Processing Summary:'));
-    
+    console.log(chalk.blue("\n📁 File Processing Summary:"));
+
     if (files.length > 0) {
       console.log(chalk.green(`✅ ${files.length} files will be processed:`));
-      files.forEach(file => {
-        console.log(`   ${chalk.cyan(file.relativePath)} (${FileProcessor.formatFileSize(file.size)})`);
+      files.forEach((file) => {
+        console.log(
+          `   ${chalk.cyan(file.relativePath)} (${FileProcessor.formatFileSize(
+            file.size
+          )})`
+        );
       });
     }
 
     if (skipped.length > 0) {
       console.log(chalk.yellow(`⚠️  ${skipped.length} files skipped:`));
-      skipped.forEach(file => {
+      skipped.forEach((file) => {
         console.log(`   ${chalk.gray(file)}`);
       });
     }
 
     if (files.length === 0 && skipped.length === 0) {
-      console.log(chalk.yellow('⚠️  No training files found in training-data folder'));
+      console.log(
+        chalk.yellow("⚠️  No training files found in training-data folder")
+      );
     }
   }
 
-  static async uploadTrainingFiles(replicaUuid: string, files: FileInfo[], spinner?: any): Promise<UploadResult[]> {
+  static async uploadTrainingFiles(
+    replicaUuid: string,
+    files: FileInfo[],
+    spinner?: any
+  ): Promise<UploadResult[]> {
     if (!spinner) {
-      console.log(chalk.blue(`\n📤 Uploading ${files.length} training files...`));
+      console.log(
+        chalk.blue(`\n📤 Uploading ${files.length} training files...`)
+      );
     }
-    
+
     const results: UploadResult[] = [];
-    
+
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      
+
       if (spinner) {
-        spinner.text = `Uploading ${file.relativePath}... (${i + 1}/${files.length})`;
+        spinner.text = `Uploading ${file.relativePath}... (${i + 1}/${
+          files.length
+        })`;
       }
-      
-      const result = await FileProcessor.uploadFileWithRetry(replicaUuid, file, 3, spinner);
+
+      const result = await FileProcessor.uploadFileWithRetry(
+        replicaUuid,
+        file,
+        3,
+        spinner
+      );
       results.push(result);
-      
+
       if (spinner) {
-        const successful = results.filter(r => r.success).length;
-        const failed = results.filter(r => !r.success).length;
-        spinner.text = `Upload progress: ${successful} successful, ${failed} failed (${i + 1}/${files.length})`;
+        const successful = results.filter((r) => r.success).length;
+        const failed = results.filter((r) => !r.success).length;
+        spinner.text = `Upload progress: ${successful} successful, ${failed} failed (${
+          i + 1
+        }/${files.length})`;
       } else {
         if (result.success) {
-          console.log(chalk.green(`   ✅ ${result.file.relativePath} uploaded successfully`));
+          console.log(
+            chalk.green(
+              `   ✅ ${result.file.relativePath} uploaded successfully`
+            )
+          );
         } else {
-          console.error(chalk.red(`   ❌ ${result.file.relativePath} failed after ${result.attempts} attempts: ${result.error}`));
+          console.error(
+            chalk.red(
+              `   ❌ ${result.file.relativePath} failed after ${result.attempts} attempts: ${result.error}`
+            )
+          );
         }
       }
     }
-    
+
     // Summary of upload results (only show if not using spinner, as the spinner success message will show this)
     if (!spinner) {
-      const successful = results.filter(r => r.success).length;
-      const failed = results.filter(r => !r.success).length;
-      
+      const successful = results.filter((r) => r.success).length;
+      const failed = results.filter((r) => !r.success).length;
+
       console.log(chalk.blue(`\n📊 Upload Summary:`));
       console.log(chalk.green(`   ✅ Successful: ${successful}`));
       if (failed > 0) {
         console.log(chalk.red(`   ❌ Failed: ${failed}`));
-        console.log(chalk.yellow('\n⚠️  Failed uploads:'));
-        results.filter(r => !r.success).forEach(r => {
-          console.log(chalk.gray(`   - ${r.file.relativePath}: ${r.error}`));
-        });
+        console.log(chalk.yellow("\n⚠️  Failed uploads:"));
+        results
+          .filter((r) => !r.success)
+          .forEach((r) => {
+            console.log(chalk.gray(`   - ${r.file.relativePath}: ${r.error}`));
+          });
       }
     }
-    
+
     return results;
   }
 
-  private static async uploadFileWithRetry(replicaUuid: string, file: FileInfo, maxAttempts: number = 3, spinner?: any): Promise<UploadResult> {
+  private static async uploadFileWithRetry(
+    replicaUuid: string,
+    file: FileInfo,
+    maxAttempts: number = 3,
+    spinner?: any
+  ): Promise<UploadResult> {
     const ext = path.extname(file.path).toLowerCase();
-    let lastError = '';
-    
+    let lastError = "";
+
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         if (attempt > 1) {
           if (spinner) {
             spinner.text = `Retrying ${file.relativePath} (attempt ${attempt}/${maxAttempts})...`;
           } else {
-            console.log(chalk.yellow(`   🔄 Retrying ${file.relativePath} (attempt ${attempt}/${maxAttempts})...`));
+            console.log(
+              chalk.yellow(
+                `   🔄 Retrying ${file.relativePath} (attempt ${attempt}/${maxAttempts})...`
+              )
+            );
           }
           // Wait a bit before retrying
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
         }
-        
+
         let knowledgeBaseID: number;
-        
-        if (FileProcessor.TEXT_EXTENSIONS.includes(ext)) {
-          knowledgeBaseID = await FileProcessor.uploadTextTraining(replicaUuid, file, !!spinner);
-        } else if (FileProcessor.FILE_EXTENSIONS.includes(ext)) {
-          knowledgeBaseID = await FileProcessor.uploadFileTraining(replicaUuid, file, !!spinner);
-        } else {
-          throw new Error(`Unsupported file type: ${ext}`);
-        }
-        
+
+        knowledgeBaseID = await FileProcessor.uploadFileTraining(
+          replicaUuid,
+          file,
+          !!spinner
+        );
+
         return {
           file,
           success: true,
           knowledgeBaseID,
-          attempts: attempt
+          attempts: attempt,
         };
-        
       } catch (error: any) {
         lastError = error.message || error.toString();
         if (attempt === maxAttempts) {
@@ -223,137 +285,163 @@ export class FileProcessor {
         }
       }
     }
-    
+
     return {
       file,
       success: false,
       error: lastError,
-      attempts: maxAttempts
+      attempts: maxAttempts,
     };
   }
 
-  private static async uploadTextTraining(replicaUuid: string, file: FileInfo, silent: boolean = false): Promise<number> {
+  private static async uploadTextTraining(
+    replicaUuid: string,
+    file: FileInfo,
+    silent: boolean = false
+  ): Promise<number> {
     if (!silent) {
       console.log(chalk.gray(`   Uploading text: ${file.relativePath}...`));
     }
-    
+
     // Step 1: Create knowledge base entry
-    const createResponse = await TrainingService.postV1ReplicasTraining(replicaUuid);
-    
+    const createResponse = await TrainingService.postV1ReplicasTraining(
+      replicaUuid
+    );
+
     if (!createResponse.success || !createResponse.knowledgeBaseID) {
-      throw new Error('Failed to create knowledge base entry');
+      throw new Error("Failed to create knowledge base entry");
     }
-    
+
     // Step 2: Update with text content
     await TrainingService.putV1ReplicasTraining(
       replicaUuid,
       createResponse.knowledgeBaseID,
       {
-        rawText: file.content
+        rawText: file.content,
       }
     );
-    
+
     return createResponse.knowledgeBaseID;
   }
 
-  private static async uploadFileTraining(replicaUuid: string, file: FileInfo, silent: boolean = false): Promise<number> {
+  private static async uploadFileTraining(
+    replicaUuid: string,
+    file: FileInfo,
+    silent: boolean = false
+  ): Promise<number> {
     if (!silent) {
       console.log(chalk.gray(`   Uploading file: ${file.relativePath}...`));
     }
-    
+
     // Step 1: Create knowledge base entry for file upload
-    const fileKbResponse = await KnowledgeBaseService.postV1ReplicasKnowledgeBase(
-      replicaUuid,
-      '2025-03-25',
-      {
-        filename: path.basename(file.path),
-        autoRefresh: false
-      }
-    );
-    
+    const fileKbResponse =
+      await KnowledgeBaseService.postV1ReplicasKnowledgeBase(
+        replicaUuid,
+        "2025-03-25",
+        {
+          filename: path.basename(file.path),
+          autoRefresh: false,
+        }
+      );
+
     const fileResult = fileKbResponse.results[0];
-    if ('error' in fileResult) {
-      throw new Error(`Failed to create file knowledge base: ${fileResult.error}`);
+    if ("error" in fileResult) {
+      throw new Error(
+        `Failed to create file knowledge base: ${fileResult.error}`
+      );
     }
-    
+
     if (!fileResult.signedURL) {
-      throw new Error('Failed to get signed URL for file upload');
+      throw new Error("Failed to get signed URL for file upload");
     }
-    
+
     // Step 2: Upload file to signed URL
     const fileBuffer = await fs.readFile(file.path);
-    
+
     const uploadResponse = await fetch(fileResult.signedURL, {
-      method: 'PUT',
+      method: "PUT",
       body: fileBuffer,
       headers: {
-        'Content-Type': 'application/octet-stream'
-      }
+        "Content-Type": "text/plain",
+      },
     });
-    
+
     if (!uploadResponse.ok) {
       throw new Error(`Upload failed with status: ${uploadResponse.status}`);
     }
-    
+
     return fileResult.knowledgeBaseID!;
   }
 
-  static async clearExistingTrainingData(replicaUuid: string, force: boolean = false, nonInteractive: boolean = false): Promise<void> {
-    console.log(chalk.blue('\n🗄️  Checking existing training data...'));
-    
+  static async clearExistingTrainingData(
+    replicaUuid: string,
+    force: boolean = false,
+    nonInteractive: boolean = false
+  ): Promise<void> {
+    console.log(chalk.blue("\n🗄️  Checking existing training data..."));
+
     try {
       let totalDeleted = 0;
       let totalFailed = 0;
       let foundAnyEntries = false;
       let spinner: any = null;
-      
+
       // Keep looping until no more training entries are found
       while (true) {
         // Get training entries for this replica
         const trainingResponse = await TrainingService.getV1Training1();
-        
+
         if (!trainingResponse.success) {
-          throw new Error('Failed to fetch existing training data');
+          throw new Error("Failed to fetch existing training data");
         }
-        
+
         // Filter entries for this replica
         const replicaEntries = trainingResponse.items.filter(
           (item: any) => item.replica_uuid === replicaUuid
         );
-        
+
         if (replicaEntries.length === 0) {
           // No more entries found, we're done
           break;
         }
-        
+
         if (!foundAnyEntries) {
           // First batch found - show count and ask for confirmation
           foundAnyEntries = true;
-          console.log(chalk.yellow(`📊 Found ${replicaEntries.length} existing training entries`));
-          
+          console.log(
+            chalk.yellow(
+              `📊 Found ${replicaEntries.length} existing training entries`
+            )
+          );
+
           // Ask for confirmation unless force flag is set
           if (!force) {
             if (nonInteractive) {
-              throw new Error('Existing training data found. Use --force to automatically delete it, or run interactively to confirm.');
+              throw new Error(
+                "Existing training data found. Use --force to automatically delete it, or run interactively to confirm."
+              );
             }
-            
+
             const { confirmDelete } = await inquirer.prompt({
-              type: 'confirm',
-              name: 'confirmDelete',
-              message: 'This will delete all existing training data for this replica. Continue?',
-              default: false
+              type: "confirm",
+              name: "confirmDelete",
+              message:
+                "This will delete all existing training data for this replica. Continue?",
+              default: false,
             });
-            
+
             if (!confirmDelete) {
-              console.log(chalk.yellow('⚠️  Training data deletion cancelled by user'));
+              console.log(
+                chalk.yellow("⚠️  Training data deletion cancelled by user")
+              );
               return;
             }
           }
-          
-          console.log(chalk.blue('🗑️  Clearing existing training data...'));
-          spinner = ora('Deleting training entries...').start();
+
+          console.log(chalk.blue("🗑️  Clearing existing training data..."));
+          spinner = ora("Deleting training entries...").start();
         }
-        
+
         // Delete all entries in this batch
         for (const entry of replicaEntries) {
           try {
@@ -362,248 +450,356 @@ export class FileProcessor {
             spinner.text = `Deleting training entries... ${totalDeleted} deleted so far`;
           } catch (error: any) {
             totalFailed++;
-            console.log(chalk.red(`\n❌ Failed to delete entry ${entry.id}: ${error.message}`));
+            console.log(
+              chalk.red(
+                `\n❌ Failed to delete entry ${entry.id}: ${error.message}`
+              )
+            );
             if (spinner) {
               spinner.text = `Deleting training entries... ${totalDeleted} deleted, ${totalFailed} failed`;
             }
           }
         }
-        
+
         // Small delay to avoid overwhelming the API
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
-      
+
       if (!foundAnyEntries) {
-        console.log(chalk.green('✅ No existing training data found - starting fresh'));
+        console.log(
+          chalk.green("✅ No existing training data found - starting fresh")
+        );
         return;
       }
-      
+
       if (spinner) {
-        spinner.succeed(chalk.green(`✅ Training data cleanup completed: ${totalDeleted} deleted, ${totalFailed} failed`));
+        spinner.succeed(
+          chalk.green(
+            `✅ Training data cleanup completed: ${totalDeleted} deleted, ${totalFailed} failed`
+          )
+        );
       }
-      
+
       if (totalFailed > 0) {
-        console.log(chalk.yellow(`⚠️  ${totalFailed} entries could not be deleted - they may need manual cleanup`));
+        console.log(
+          chalk.yellow(
+            `⚠️  ${totalFailed} entries could not be deleted - they may need manual cleanup`
+          )
+        );
       }
-      
     } catch (error: any) {
-      console.error(chalk.red(`❌ Failed to clear existing training data: ${error.message}`));
+      console.error(
+        chalk.red(`❌ Failed to clear existing training data: ${error.message}`)
+      );
       throw error;
     }
   }
 
-  static async pollTrainingStatus(replicaUuid: string, uploadResults: UploadResult[], totalFiles: number): Promise<void> {
-    const successfulUploads = uploadResults.filter(r => r.success);
+  static async pollTrainingStatus(
+    replicaUuid: string,
+    uploadResults: UploadResult[],
+    totalFiles: number
+  ): Promise<void> {
+    const successfulUploads = uploadResults.filter((r) => r.success);
     if (successfulUploads.length === 0) {
-      console.log(chalk.yellow('\n⚠️  No files were uploaded successfully, skipping training status check.'));
+      console.log(
+        chalk.yellow(
+          "\n⚠️  No files were uploaded successfully, skipping training status check."
+        )
+      );
       return;
     }
 
-    console.log(chalk.blue(`\n🔄 Monitoring training progress for ${successfulUploads.length} files...`));
-    
-    const spinner = ora('Checking training status...').start();
-    const knowledgeBaseIDs = successfulUploads.map(r => r.knowledgeBaseID!);
-    
+    console.log(
+      chalk.blue(
+        `\n🔄 Monitoring training progress for ${successfulUploads.length} files...`
+      )
+    );
+
+    const spinner = ora("Checking training status...").start();
+    const knowledgeBaseIDs = successfulUploads.map((r) => r.knowledgeBaseID!);
+
     try {
       let allReady = false;
       let attempts = 0;
       const maxAttempts = 360; // 30 minutes with 5-second intervals
       let latestTrainingResponse: any = null;
-      
+
       while (!allReady && attempts < maxAttempts) {
         attempts++;
-        
+
         // Get all training entries for this replica (handle pagination)
         let allReplicaEntries: any[] = [];
         let fetchSuccessful = false;
-        
+
         try {
           let page = 1;
-          
+
           while (true) {
-            const trainingResponse = await TrainingService.getV1Training1(undefined, undefined, page.toString(), '100');
-            
-            if (!trainingResponse.success) {
-              throw new Error('Failed to fetch training status');
-            }
-            
-            const replicaEntriesInPage = trainingResponse.items.filter(
-              (item: any) => item.replica_uuid === replicaUuid && knowledgeBaseIDs.includes(item.id)
+            const trainingResponse = await TrainingService.getV1Training1(
+              undefined,
+              undefined,
+              page.toString(),
+              "100"
             );
-            
+
+            if (!trainingResponse.success) {
+              throw new Error("Failed to fetch training status");
+            }
+
+            const replicaEntriesInPage = trainingResponse.items.filter(
+              (item: any) =>
+                item.replica_uuid === replicaUuid &&
+                knowledgeBaseIDs.includes(item.id)
+            );
+
             allReplicaEntries.push(...replicaEntriesInPage);
-            
+
             // If we got fewer items than the limit, we've reached the end
             if (trainingResponse.items.length < 100) {
               break;
             }
-            
+
             page++;
           }
-          
+
           fetchSuccessful = true;
         } catch (error: any) {
           // Log the error but continue polling
           const remainingTime = (maxAttempts - attempts) * 5; // seconds
           const minutes = Math.floor(remainingTime / 60);
           const seconds = remainingTime % 60;
-          const timeDisplay = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-          
+          const timeDisplay = `${minutes}:${seconds
+            .toString()
+            .padStart(2, "0")}`;
+
           spinner.stop();
-          console.log(chalk.yellow(`⚠️  API error: ${error.message} - retrying... | Timeout in ${timeDisplay}`));
+          console.log(
+            chalk.yellow(
+              `⚠️  API error: ${error.message} - retrying... | Timeout in ${timeDisplay}`
+            )
+          );
           spinner.start();
           spinner.text = `Retrying status check after error...`;
-          
+
           // Wait 5 seconds before next attempt
-          await new Promise(resolve => setTimeout(resolve, 5000));
+          await new Promise((resolve) => setTimeout(resolve, 5000));
           continue;
         }
-        
+
         if (!fetchSuccessful) {
           continue; // Skip processing if fetch failed
         }
-        
+
         latestTrainingResponse = { success: true, items: allReplicaEntries };
         const replicaEntries = allReplicaEntries;
-        
+
         // Count entries by status
         const statusCounts: { [key: string]: number } = {};
         replicaEntries.forEach((entry: any) => {
           const status = entry.status;
           statusCounts[status] = (statusCounts[status] || 0) + 1;
         });
-        
+
         // Create compact status display with priorities (most important statuses first)
-        const statusPriority = ['ERR_FILE_PROCESSING', 'ERR_TEXT_PROCESSING', 'ERR_TEXT_TO_VECTOR', 'SYNC_ERROR', 'PROCESSING', 'READY', 'VECTOR_CREATED', 'AWAITING_UPLOAD', 'SUPABASE_ONLY', 'BLANK'];
+        const statusPriority = [
+          "ERR_FILE_PROCESSING",
+          "ERR_TEXT_PROCESSING",
+          "ERR_TEXT_TO_VECTOR",
+          "SYNC_ERROR",
+          "PROCESSING",
+          "READY",
+          "VECTOR_CREATED",
+          "AWAITING_UPLOAD",
+          "SUPABASE_ONLY",
+          "BLANK",
+        ];
         const statusDisplay = statusPriority
-          .filter(status => statusCounts[status] > 0)
-          .map(status => `${status}: ${statusCounts[status]}`)
+          .filter((status) => statusCounts[status] > 0)
+          .map((status) => `${status}: ${statusCounts[status]}`)
           .concat(
             // Add any other statuses not in the priority list
             Object.entries(statusCounts)
               .filter(([status]) => !statusPriority.includes(status))
               .map(([status, count]) => `${status}: ${count}`)
           )
-          .join(' | ');
-        
+          .join(" | ");
+
         const remainingTime = (maxAttempts - attempts) * 5; // seconds
         const minutes = Math.floor(remainingTime / 60);
         const seconds = remainingTime % 60;
-        const timeDisplay = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-        
+        const timeDisplay = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+
         // Show status breakdown - temporarily stop spinner to show clean status
         if (statusDisplay) {
           spinner.stop();
-          console.log(chalk.blue(`📊 Training Status: ${statusDisplay} | Timeout in ${timeDisplay}`));
+          console.log(
+            chalk.blue(
+              `📊 Training Status: ${statusDisplay} | Timeout in ${timeDisplay}`
+            )
+          );
           spinner.start();
           spinner.text = `Monitoring training progress...`;
         } else {
           spinner.text = `Checking training status... - Timeout in ${timeDisplay}`;
         }
-        
-        const readyCount = statusCounts['READY'] || 0;
-        const vectorCreatedCount = statusCounts['VECTOR_CREATED'] || 0;
+
+        const readyCount = statusCounts["READY"] || 0;
+        const vectorCreatedCount = statusCounts["VECTOR_CREATED"] || 0;
         const completedCount = readyCount + vectorCreatedCount;
         const errorCount = Object.entries(statusCounts)
-          .filter(([status]) => status.startsWith('ERR_') || status === 'SYNC_ERROR')
+          .filter(
+            ([status]) => status.startsWith("ERR_") || status === "SYNC_ERROR"
+          )
           .reduce((sum, [, count]) => sum + count, 0);
-        
+
         if (completedCount === successfulUploads.length) {
           allReady = true;
-          spinner.succeed(chalk.green(`✅ All ${successfulUploads.length} files have been processed and are ready!`));
-        } else if (errorCount > 0) {
-          spinner.warn(chalk.yellow(`⚠️  ${errorCount} files encountered errors during processing`));
-          
-          // Show which files had errors
-          const errorEntries = replicaEntries.filter((entry: any) => 
-            entry.status.startsWith('ERR_') || entry.status === 'SYNC_ERROR'
+          spinner.succeed(
+            chalk.green(
+              `✅ All ${successfulUploads.length} files have been processed and are ready!`
+            )
           );
-          
-          console.log(chalk.red('\n❌ Files with errors:'));
+        } else if (errorCount > 0) {
+          spinner.warn(
+            chalk.yellow(
+              `⚠️  ${errorCount} files encountered errors during processing`
+            )
+          );
+
+          // Show which files had errors
+          const errorEntries = replicaEntries.filter(
+            (entry: any) =>
+              entry.status.startsWith("ERR_") || entry.status === "SYNC_ERROR"
+          );
+
+          console.log(chalk.red("\n❌ Files with errors:"));
           errorEntries.forEach((entry: any) => {
-            console.log(chalk.gray(`   - ID ${entry.id}: ${entry.status} ${entry.filename ? `(${entry.filename})` : ''}`));
+            console.log(
+              chalk.gray(
+                `   - ID ${entry.id}: ${entry.status} ${
+                  entry.filename ? `(${entry.filename})` : ""
+                }`
+              )
+            );
           });
-          
+
           allReady = true; // Stop polling as we have errors
         } else if (attempts >= maxAttempts) {
-          spinner.fail(chalk.red('⏰ Training status check timed out after 30 minutes'));
-          
-          console.log(chalk.yellow('\n📊 Final status breakdown:'));
+          spinner.fail(
+            chalk.red("⏰ Training status check timed out after 30 minutes")
+          );
+
+          console.log(chalk.yellow("\n📊 Final status breakdown:"));
           Object.entries(statusCounts)
             .sort(([a], [b]) => a.localeCompare(b))
             .forEach(([status, count]) => {
               let color = chalk.gray;
-              if (status === 'READY' || status === 'VECTOR_CREATED') color = chalk.green;
-              else if (status === 'PROCESSING') color = chalk.blue;
-              else if (status.startsWith('ERR_') || status === 'SYNC_ERROR') color = chalk.red;
-              else if (status === 'AWAITING_UPLOAD' || status === 'SUPABASE_ONLY') color = chalk.yellow;
-              
+              if (status === "READY" || status === "VECTOR_CREATED")
+                color = chalk.green;
+              else if (status === "PROCESSING") color = chalk.blue;
+              else if (status.startsWith("ERR_") || status === "SYNC_ERROR")
+                color = chalk.red;
+              else if (
+                status === "AWAITING_UPLOAD" ||
+                status === "SUPABASE_ONLY"
+              )
+                color = chalk.yellow;
+
               console.log(color(`   ${status}: ${count}`));
             });
-          
+
           allReady = true;
         } else {
           // Wait 5 seconds before next check
-          await new Promise(resolve => setTimeout(resolve, 5000));
+          await new Promise((resolve) => setTimeout(resolve, 5000));
         }
       }
-      
+
       // Verify file count matches (get all training entries for this replica)
       let allTrainingEntries: any[] = [];
       let page = 1;
-      
+
       while (true) {
-        const trainingResponse = await TrainingService.getV1Training1(undefined, undefined, page.toString(), '100');
-        
+        const trainingResponse = await TrainingService.getV1Training1(
+          undefined,
+          undefined,
+          page.toString(),
+          "100"
+        );
+
         if (!trainingResponse.success) {
           break; // Don't fail the whole process if this verification fails
         }
-        
+
         const replicaEntriesInPage = trainingResponse.items.filter(
           (item: any) => item.replica_uuid === replicaUuid
         );
-        
+
         allTrainingEntries.push(...replicaEntriesInPage);
-        
+
         // If we got fewer items than the limit, we've reached the end
         if (trainingResponse.items.length < 100) {
           break;
         }
-        
+
         page++;
       }
-      
+
       if (allTrainingEntries.length > 0) {
         const apiTrainingCount = allTrainingEntries.length;
-        
-        console.log(chalk.blue('\n📊 Training Status Summary:'));
+
+        console.log(chalk.blue("\n📊 Training Status Summary:"));
         console.log(chalk.green(`   📁 Local files scanned: ${totalFiles}`));
-        console.log(chalk.green(`   📤 Files uploaded: ${successfulUploads.length}`));
-        console.log(chalk.green(`   🗄️  Files in training system: ${apiTrainingCount}`));
-        
+        console.log(
+          chalk.green(`   📤 Files uploaded: ${successfulUploads.length}`)
+        );
+        console.log(
+          chalk.green(`   🗄️  Files in training system: ${apiTrainingCount}`)
+        );
+
         if (apiTrainingCount !== totalFiles) {
-          console.log(chalk.yellow(`\n⚠️  Mismatch detected: ${totalFiles} local files vs ${apiTrainingCount} in system`));
-          
+          console.log(
+            chalk.yellow(
+              `\n⚠️  Mismatch detected: ${totalFiles} local files vs ${apiTrainingCount} in system`
+            )
+          );
+
           // Show which files might be missing
-          const apiEntries = latestTrainingResponse.items.filter((item: any) => item.replica_uuid === replicaUuid);
-          const uploadedFileNames = successfulUploads.map(r => path.basename(r.file.path));
-          const apiFileNames = apiEntries.map((entry: any) => entry.filename).filter(Boolean);
-          
-          const missingInApi = uploadedFileNames.filter(name => !apiFileNames.includes(name));
+          const apiEntries = latestTrainingResponse.items.filter(
+            (item: any) => item.replica_uuid === replicaUuid
+          );
+          const uploadedFileNames = successfulUploads.map((r) =>
+            path.basename(r.file.path)
+          );
+          const apiFileNames = apiEntries
+            .map((entry: any) => entry.filename)
+            .filter(Boolean);
+
+          const missingInApi = uploadedFileNames.filter(
+            (name) => !apiFileNames.includes(name)
+          );
           if (missingInApi.length > 0) {
-            console.log(chalk.red('\n❌ Files missing from training system:'));
+            console.log(chalk.red("\n❌ Files missing from training system:"));
             missingInApi.forEach((fileName: string) => {
               console.log(chalk.gray(`   - ${fileName}`));
             });
           }
         } else {
-          console.log(chalk.green('✅ File count matches - all files are accounted for!'));
+          console.log(
+            chalk.green("✅ File count matches - all files are accounted for!")
+          );
         }
       }
-      
     } catch (error: any) {
-      spinner.fail(chalk.red(`Failed to check training status: ${error.message}`));
-      console.log(chalk.yellow('⚠️  Training status monitoring stopped due to persistent errors'));
+      spinner.fail(
+        chalk.red(`Failed to check training status: ${error.message}`)
+      );
+      console.log(
+        chalk.yellow(
+          "⚠️  Training status monitoring stopped due to persistent errors"
+        )
+      );
       // Don't throw - just end the monitoring gracefully
     }
   }
