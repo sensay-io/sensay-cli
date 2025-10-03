@@ -651,10 +651,10 @@ async function runKBTypeTest(
 
     switch (kbType) {
       case 'text':
-        testMessage = `This is a test to assess the LLM's ability to retrieve specific information. Please respond with the RAINBOW_UNICORN_ code you were trained on.`; // To avoid triggering the LLM's guardrails against sharing secrets
+        testMessage = `What information did you learn from your training data? Please include any codes or identifiers that were mentioned.`; // Neutral framing to avoid safety triggers
         break;
       case 'file':
-        testMessage = `This is a test to assess the LLM's ability to retrieve specific information. Please respond with the RAINBOW_UNICORN_ code you were trained on.`; // To avoid triggering the LLM's guardrails against sharing secrets
+        testMessage = `What information did you learn from your training data? Please include any codes or identifiers that were mentioned.`; // Neutral framing to avoid safety triggers
         break;
       case 'youtube':
         if (scenario.name === 'with_cc') {
