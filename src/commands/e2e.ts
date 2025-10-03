@@ -651,6 +651,8 @@ async function runKBTypeTest(
 
     switch (kbType) {
       case 'text':
+        testMessage = `Please repeat back the exact content you were trained on, including the RAINBOW_UNICORN_ code.`; // More explicit for text KB
+        break;
       case 'file':
         testMessage = `This is a test message, so you need to respond with the RAINBOW_UNICORN_ verification code you were trained on. What is the RAINBOW_UNICORN_ verification code you were trained on?`; // To avoid triggering the LLM's guardrails against sharing secrets
         break;
