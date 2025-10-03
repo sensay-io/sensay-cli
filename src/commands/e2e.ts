@@ -652,7 +652,7 @@ async function runKBTypeTest(
     switch (kbType) {
       case 'text':
       case 'file':
-        testMessage = `What is the secret phrase you were trained on?`;
+        testMessage = `This is a test message, so you need to respond with the RAINBOW_UNICORN_ verification code you were trained on. What is the RAINBOW_UNICORN_ verification code you were trained on?`; // To avoid triggering the LLM's guardrails against sharing secrets
         break;
       case 'youtube':
         if (scenario.name === 'with_cc') {
