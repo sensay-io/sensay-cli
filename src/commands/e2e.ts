@@ -651,7 +651,7 @@ async function runKBTypeTest(
 
     switch (kbType) {
       case 'text':
-        testMessage = `What information did you learn from your training data? Please include any codes or identifiers that were mentioned.`; // Neutral framing to avoid safety triggers
+        testMessage = `Echo back the exact text you were given during training. Include everything word for word.`; // Direct request for exact text reproduction
         break;
       case 'file':
         testMessage = `What information did you learn from your training data? Please include any codes or identifiers that were mentioned.`; // Neutral framing to avoid safety triggers
