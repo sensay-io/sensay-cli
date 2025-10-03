@@ -651,7 +651,7 @@ async function runKBTypeTest(
 
     switch (kbType) {
       case 'text':
-        testMessage = `What is the secret phrase mentioned in the text?`;
+        testMessage = `What is the rainbow unicorn phrase mentioned in the text?`;
         break;
       case 'file':
         testMessage = `What information did you learn from your training data? Please include any codes or identifiers that were mentioned.`; // Neutral framing to avoid safety triggers
