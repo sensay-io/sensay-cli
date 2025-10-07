@@ -980,32 +980,7 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
 
       console.log(chalk.green(`✅ User created: ${userId}\n`));
 
-      // Step 2: Run tests for each KB type and scenario        if (kbType === 'file' && kbFilePaths.length > 0) {
-          // Build one scenario per provided file
-          kbFilePaths.forEach((filePath, index) => {
-            const providedType = kbContentTypes[index];
-            const scenario: KBTestScenario = {
-              name: path.basename(filePath),
-              expectedOutcome: 'success',
-              description: `Upload file ${path.basename(filePath)}`,
-              filePath,
-              contentType: providedType || inferContentTypeFromFilename(filePath)
-            };
-            allTests.push({ kbType, scenario });
-          });
-        } else {
-          // Fallback to default scenarios (e.g., synthetic txt file)
-          const scenarios = KB_TEST_SCENARIOS[kbType] || [{ name: 'standard', expectedOutcome: 'success' } as KBTestScenario];
-          for (const scenario of scenarios) {
-            allTests.push({ kbType, scenario });
-          }
-        }
-      }
-
-      if (options.parallel) {
-        console.log(chalk.cyan('\n🚀 Running tests in parallel mode...'));
-        console.log(chalk.gray(`  Starting ${allTests.length} tests simultaneously at ${new Date().toISOString()}`));
-
+      // Step 2: Run tests for each KB type and scenario
       // Build list of all test scenarios to run
       const allTests: Array<{ kbType: string; scenario: KBTestScenario }> = [];
       for (const kbType of kbTypesToTest) {
