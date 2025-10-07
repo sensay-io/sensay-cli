@@ -686,7 +686,7 @@ async function runKBTypeTest(
       if (!verificationPassed) {
         console.log(chalk.red(`  [${kbType}/${scenario.name}] [KB:${kbId}] ❌ Chat verification failed`));
         console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Expected phrase: ${expectedPhrase}`));
-        console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Response: ${responseContent.substring(0, 100)}...`));
+        console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Response: ${responseContent.substring(0, 500)}...`));
       }
     } else if (kbType === 'youtube' && scenario.name === 'with_cc') {
       // For YouTube CC scenario, check for the specific passphrase
@@ -696,7 +696,7 @@ async function runKBTypeTest(
       if (!verificationPassed) {
         console.log(chalk.red(`  [${kbType}/${scenario.name}] [KB:${kbId}] ❌ Chat verification failed`));
         console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Expected phrase: ${expectedPhrase}`));
-        console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Response: ${responseContent.substring(0, 100)}...`));
+        console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Response: ${responseContent.substring(0, 500)}...`));
       }
     } else {
       // For youtube (non-cc), just check if there's a reasonable response
@@ -707,7 +707,7 @@ async function runKBTypeTest(
 
       if (!verificationPassed) {
         console.log(chalk.red(`  [${kbType}/${scenario.name}] [KB:${kbId}] ❌ Chat verification failed - no meaningful response`));
-        console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Response: ${responseContent.substring(0, 100)}...`));
+        console.log(chalk.gray(`  [${kbType}/${scenario.name}] [KB:${kbId}] Response: ${responseContent.substring(0, 500)}...`));
       }
     }
 
