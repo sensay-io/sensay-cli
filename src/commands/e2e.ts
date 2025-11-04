@@ -213,7 +213,7 @@ async function runKBTypeTest(
       ownerID: userId,
       slug: `e2e-test-${kbType}-${scenario.name}-${testRunId}`,
       llm: {
-        model: 'claude-3-5-haiku-latest',
+        model: 'claude-haiku-4.5',
         memoryMode: 'rag-search',
         systemMessage: `You are a test replica created for E2E testing. You have been trained on ${kbType} content.`,
         tools: []
