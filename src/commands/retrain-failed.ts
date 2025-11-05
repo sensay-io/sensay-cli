@@ -219,6 +219,7 @@ export async function retrainFailedCommand(folderPath: string, options: RetrainF
             '2025-03-25',
             undefined,
             {
+              status: 'NEW',
               rawText: undefined 
             }
           );
