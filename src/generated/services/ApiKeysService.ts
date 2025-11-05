@@ -11,13 +11,17 @@ export class ApiKeysService {
      *
      * If you have an invitation code, you can redeem it to create an Organization and an API key associated with it.
      *
-     * @param code
+     * @param code The code of the invite you want to redeem.
+     * @param xApiVersion
+     * @param contentEncoding Content encoding for request body compression. Optional - when used, client is responsible for gzipping and sending binary data.
      * @param requestBody
      * @returns any Details about the created Organization and API Key.
      * @throws ApiError
      */
     public static postV1ApiKeysInvitesRedeem(
         code: string,
+        xApiVersion: string = '2025-03-25',
+        contentEncoding?: 'gzip',
         requestBody?: {
             /**
              * The name of the organization you want to create.
@@ -52,6 +56,10 @@ export class ApiKeysService {
             url: '/v1/api-keys/invites/{code}/redeem',
             path: {
                 'code': code,
+            },
+            headers: {
+                'X-API-Version': xApiVersion,
+                'Content-Encoding': contentEncoding,
             },
             body: requestBody,
             mediaType: 'application/json',

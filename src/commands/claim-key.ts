@@ -80,7 +80,7 @@ export async function claimKeyCommand(options: ClaimKeyOptions): Promise<void> {
   console.log(chalk.yellow('🔄 Claiming API key...'));
 
   try {
-    const response = await ApiKeysService.postV1ApiKeysInvitesRedeem(INTERNAL_CODE, {
+    const response = await ApiKeysService.postV1ApiKeysInvitesRedeem(INTERNAL_CODE, '2025-03-25', undefined, {
       organizationName: organizationName!,
       name: name!,
       email: email!

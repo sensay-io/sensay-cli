@@ -10,7 +10,7 @@ export class TelegramIntegrationService {
     /**
      * Get Telegram chat history
      * List telegram chat history items of a Replica belonging to the logged in user.
-     * @param replicaUuid
+     * @param replicaUuid The replica unique identifier (UUID)
      * @returns any List the chat history of the replica by the currently logged in user
      * @throws ApiError
      */
@@ -105,21 +105,22 @@ export class TelegramIntegrationService {
     /**
      * Create a Telegram chat history entry
      * Save chat history items of a Replica belonging to the logged in user.
-     * @param replicaUuid
+     * @param replicaUuid The replica unique identifier (UUID)
+     * @param xApiVersion
+     * @param contentEncoding Content encoding for request body compression. Optional - when used, client is responsible for gzipping and sending binary data.
      * @param requestBody
      * @returns any Saves the chat history of the replica by the currently logged in user.
      * @throws ApiError
      */
     public static postV1ReplicasChatHistoryTelegram(
         replicaUuid: replicaUUID_parameter,
+        xApiVersion: string = '2025-03-25',
+        contentEncoding?: 'gzip',
         requestBody?: {
             /**
              * Content of the message
              */
             content: string;
-            /**
-             * Telegram information about the message
-             */
             telegram_data: {
                 /**
                  * Type of the chat, can be either `private`, `group`, `supergroup` or `channel`.
@@ -129,6 +130,10 @@ export class TelegramIntegrationService {
                  * Unique identifier for this chat.
                  */
                 chat_id: number;
+                /**
+                 * Name of the chat (group name, channel title, or user display name for private chats).
+                 */
+                chat_name?: string;
                 /**
                  * Sender of the message's userID; may be empty for messages sent to channels. For backward compatibility, if the message was sent on behalf of a chat, the field contains a fake sender user in non-channel chats.
                  */
@@ -159,6 +164,10 @@ export class TelegramIntegrationService {
             path: {
                 'replicaUUID': replicaUuid,
             },
+            headers: {
+                'X-API-Version': xApiVersion,
+                'Content-Encoding': contentEncoding,
+            },
             body: requestBody,
             mediaType: 'application/json',
             errors: {
@@ -176,13 +185,17 @@ export class TelegramIntegrationService {
      *
      * The streamed variant is not specified in the OpenAPI Schema because it is not an OpenAPI endpoint.
      *
-     * @param replicaUuid
+     * @param replicaUuid The replica unique identifier (UUID)
+     * @param xApiVersion
+     * @param contentEncoding Content encoding for request body compression. Optional - when used, client is responsible for gzipping and sending binary data.
      * @param requestBody
      * @returns any List of chat messages had with a replica by the current user, including the completion
      * @throws ApiError
      */
     public static postV1ReplicasChatCompletionsTelegram(
         replicaUuid: replicaUUID_parameter,
+        xApiVersion: string = '2025-03-25',
+        contentEncoding?: 'gzip',
         requestBody?: {
             /**
              * The prompt to generate completions for, encoded as a string.
@@ -196,9 +209,6 @@ export class TelegramIntegrationService {
              * The URL of the image to be used as context for the completion.
              */
             imageURL?: string;
-            /**
-             * Telegram information about the message
-             */
             telegram_data: {
                 /**
                  * Type of the chat, can be either `private`, `group`, `supergroup` or `channel`.
@@ -208,6 +218,10 @@ export class TelegramIntegrationService {
                  * Unique identifier for this chat.
                  */
                 chat_id: number;
+                /**
+                 * Name of the chat (group name, channel title, or user display name for private chats).
+                 */
+                chat_name?: string;
                 /**
                  * Sender of the message's userID; may be empty for messages sent to channels. For backward compatibility, if the message was sent on behalf of a chat, the field contains a fake sender user in non-channel chats.
                  */
@@ -236,6 +250,10 @@ export class TelegramIntegrationService {
             path: {
                 'replicaUUID': replicaUuid,
             },
+            headers: {
+                'X-API-Version': xApiVersion,
+                'Content-Encoding': contentEncoding,
+            },
             body: requestBody,
             mediaType: 'application/json',
             errors: {
@@ -250,8 +268,9 @@ export class TelegramIntegrationService {
     /**
      * Create a replica Telegram integration
      * Integrates a replica to Telegram. The default Sensay Telegram integration will run a bot for you until you delete the integration.
-     * @param replicaUuid
+     * @param replicaUuid The replica unique identifier (UUID)
      * @param xApiVersion
+     * @param contentEncoding Content encoding for request body compression. Optional - when used, client is responsible for gzipping and sending binary data.
      * @param requestBody
      * @returns any Telegram integration created successfully
      * @throws ApiError
@@ -259,6 +278,7 @@ export class TelegramIntegrationService {
     public static postV1ReplicasIntegrationsTelegram(
         replicaUuid: replicaUUID_parameter,
         xApiVersion: string = '2025-03-25',
+        contentEncoding?: 'gzip',
         requestBody?: {
             /**
              * Telegram Bot ID
@@ -284,6 +304,7 @@ export class TelegramIntegrationService {
             },
             headers: {
                 'X-API-Version': xApiVersion,
+                'Content-Encoding': contentEncoding,
             },
             body: requestBody,
             mediaType: 'application/json',
@@ -299,7 +320,7 @@ export class TelegramIntegrationService {
     /**
      * Delete a replica Telegram integration
      * Removes a replica Telegram integration.
-     * @param replicaUuid
+     * @param replicaUuid The replica unique identifier (UUID)
      * @param xApiVersion
      * @returns any Telegram integration deleted successfully
      * @throws ApiError

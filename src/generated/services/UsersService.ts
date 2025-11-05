@@ -17,10 +17,6 @@ export class UsersService {
         xApiVersion: string = '2025-03-25',
     ): CancelablePromise<{
         /**
-         * The name of the user
-         */
-        name?: string;
-        /**
          * The email address
          */
         email?: string;
@@ -41,6 +37,14 @@ export class UsersService {
              */
             accountType: 'discord' | 'telegram' | 'embed';
         }>;
+        /**
+         * The name of the user
+         */
+        name?: string;
+        /**
+         * Indicates the request was successful
+         */
+        success: boolean;
     }> {
         return __request(OpenAPI, {
             method: 'GET',
@@ -79,17 +83,15 @@ export class UsersService {
      * Update the current user
      * Update the currently logged in user.
      * @param xApiVersion
+     * @param contentEncoding Content encoding for request body compression. Optional - when used, client is responsible for gzipping and sending binary data.
      * @param requestBody
      * @returns any The updated User entity
      * @throws ApiError
      */
     public static putV1UsersMe(
         xApiVersion: string = '2025-03-25',
+        contentEncoding?: 'gzip',
         requestBody?: {
-            /**
-             * The name of the user
-             */
-            name?: string;
             /**
              * The email address
              */
@@ -111,12 +113,12 @@ export class UsersService {
                  */
                 accountType: 'discord' | 'telegram' | 'embed';
             }>;
+            /**
+             * The name of the user (max 50 chars, letters/numbers/spaces and ( ) . , ' - /)
+             */
+            name?: string;
         },
     ): CancelablePromise<{
-        /**
-         * The name of the user
-         */
-        name?: string;
         /**
          * The email address
          */
@@ -138,12 +140,21 @@ export class UsersService {
              */
             accountType: 'discord' | 'telegram' | 'embed';
         }>;
+        /**
+         * The name of the user
+         */
+        name?: string;
+        /**
+         * Indicates the request was successful
+         */
+        success: boolean;
     }> {
         return __request(OpenAPI, {
             method: 'PUT',
             url: '/v1/users/me',
             headers: {
                 'X-API-Version': xApiVersion,
+                'Content-Encoding': contentEncoding,
             },
             body: requestBody,
             mediaType: 'application/json',
@@ -161,17 +172,15 @@ export class UsersService {
      * Create a user
      * Creates a new user.
      * @param xApiVersion
+     * @param contentEncoding Content encoding for request body compression. Optional - when used, client is responsible for gzipping and sending binary data.
      * @param requestBody
      * @returns any The created User entity
      * @throws ApiError
      */
     public static postV1Users(
         xApiVersion: string = '2025-03-25',
+        contentEncoding?: 'gzip',
         requestBody?: {
-            /**
-             * The name of the user
-             */
-            name?: string;
             /**
              * The email address
              */
@@ -193,12 +202,12 @@ export class UsersService {
                  */
                 accountType: 'discord' | 'telegram' | 'embed';
             }>;
+            /**
+             * The name of the user (max 50 chars, letters/numbers/spaces and ( ) . , ' - /)
+             */
+            name?: string;
         },
     ): CancelablePromise<{
-        /**
-         * The name of the user
-         */
-        name?: string;
         /**
          * The email address
          */
@@ -220,12 +229,21 @@ export class UsersService {
              */
             accountType: 'discord' | 'telegram' | 'embed';
         }>;
+        /**
+         * The name of the user
+         */
+        name?: string;
+        /**
+         * Indicates the request was successful
+         */
+        success: boolean;
     }> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/v1/users',
             headers: {
                 'X-API-Version': xApiVersion,
+                'Content-Encoding': contentEncoding,
             },
             body: requestBody,
             mediaType: 'application/json',
@@ -237,7 +255,7 @@ export class UsersService {
     /**
      * Get a user by ID
      * Returns information about the user with the specified ID.
-     * @param userId
+     * @param userId User ID
      * @param xApiVersion
      * @returns any User entity
      * @throws ApiError
@@ -246,10 +264,6 @@ export class UsersService {
         userId: string,
         xApiVersion: string = '2025-03-25',
     ): CancelablePromise<{
-        /**
-         * The name of the user
-         */
-        name?: string;
         /**
          * The email address
          */
@@ -271,6 +285,14 @@ export class UsersService {
              */
             accountType: 'discord' | 'telegram' | 'embed';
         }>;
+        /**
+         * The name of the user
+         */
+        name?: string;
+        /**
+         * Indicates the request was successful
+         */
+        success: boolean;
     }> {
         return __request(OpenAPI, {
             method: 'GET',

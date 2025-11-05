@@ -5,7 +5,7 @@ import * as path from 'path';
 import { ConfigManager } from '../config/manager';
 import { configureOpenAPI } from '../utils/openapi-config';
 import inquirer from 'inquirer';
-import { ApiError, UsersService, ReplicasService, TrainingService, KnowledgeBaseService } from '../generated/index';
+import { ApiError, UsersService, ReplicasService, KnowledgeBaseService } from '../generated/index';
 import { ProgressManager } from '../utils/progress';
 
 interface ReportOptions {

@@ -17,13 +17,17 @@ export class ExperimentalService {
      *
      * Creates a chat completion response from a list of messages comprising a conversation.
      *
-     * @param replicaUuid
+     * @param replicaUuid The replica unique identifier (UUID)
+     * @param xApiVersion
+     * @param contentEncoding Content encoding for request body compression. Optional - when used, client is responsible for gzipping and sending binary data.
      * @param requestBody
      * @returns any Chat completion response in OpenAI compatible format
      * @throws ApiError
      */
     public static postV1ExperimentalReplicasChatCompletions(
         replicaUuid: replicaUUID_parameter,
+        xApiVersion: string = '2025-03-25',
+        contentEncoding?: 'gzip',
         requestBody?: {
             /**
              * A list of messages that make up the conversation context. Only the last message is used for completion.
@@ -50,9 +54,6 @@ export class ExperimentalService {
              * The place where the conversation is happening, which informs where the message should be saved in the chat history if `store` is true.
              */
             source?: 'discord' | 'embed' | 'web';
-            /**
-             * Discord information about the message
-             */
             discord_data?: {
                 /**
                  * Channel ID
@@ -162,6 +163,10 @@ export class ExperimentalService {
             url: '/v1/experimental/replicas/{replicaUUID}/chat/completions',
             path: {
                 'replicaUUID': replicaUuid,
+            },
+            headers: {
+                'X-API-Version': xApiVersion,
+                'Content-Encoding': contentEncoding,
             },
             body: requestBody,
             mediaType: 'application/json',

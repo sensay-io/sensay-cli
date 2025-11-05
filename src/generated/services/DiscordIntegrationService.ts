@@ -10,7 +10,7 @@ export class DiscordIntegrationService {
     /**
      * Get Discord chat history
      * List discord chat history items of a Replica belonging to the logged in user.
-     * @param replicaUuid
+     * @param replicaUuid The replica unique identifier (UUID)
      * @returns any List the chat history of the replica by the currently logged in user
      * @throws ApiError
      */
@@ -105,8 +105,9 @@ export class DiscordIntegrationService {
     /**
      * Create a replica Discord integration
      * Integrates a replica to Discord. The default Sensay Discord integration will run a bot for you until you delete the integration.
-     * @param replicaUuid
+     * @param replicaUuid The replica unique identifier (UUID)
      * @param xApiVersion
+     * @param contentEncoding Content encoding for request body compression. Optional - when used, client is responsible for gzipping and sending binary data.
      * @param requestBody
      * @returns any Discord integration created successfully
      * @throws ApiError
@@ -114,6 +115,7 @@ export class DiscordIntegrationService {
     public static postV1ReplicasIntegrationsDiscord(
         replicaUuid: replicaUUID_parameter,
         xApiVersion: string = '2025-03-25',
+        contentEncoding?: 'gzip',
         requestBody?: {
             /**
              * A Discord Token is a unique token that can be attained from the Discord Developer Portal. It is used to connect the discord integration to the replica.
@@ -134,6 +136,7 @@ export class DiscordIntegrationService {
             },
             headers: {
                 'X-API-Version': xApiVersion,
+                'Content-Encoding': contentEncoding,
             },
             body: requestBody,
             mediaType: 'application/json',

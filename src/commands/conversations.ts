@@ -98,7 +98,7 @@ async function listConversations(replicaId: string, options: ConversationsOption
       uuid: conv.uuid,
       source: conv.source,
       messageCount: conv.messageCount,
-      assistantReplyCount: conv.assistantReplyCount,
+      assistantReplyCount: conv.replicaReplyCount,
       firstMessageAt: conv.firstMessageAt,
       lastMessageAt: conv.lastMessageAt,
       lastReplicaReplyAt: conv.lastReplicaReplyAt,
@@ -112,7 +112,7 @@ async function listConversations(replicaId: string, options: ConversationsOption
     console.log(chalk.cyan(`${index + 1}. ${conv.conversationName || 'Unnamed Conversation'}`));
     console.log(chalk.gray(`   UUID: ${conv.uuid}`));
     console.log(chalk.gray(`   Source: ${conv.source}`));
-    console.log(chalk.gray(`   Messages: ${conv.messageCount} (${conv.assistantReplyCount} assistant replies)`));
+    console.log(chalk.gray(`   Messages: ${conv.messageCount} (${conv.replicaReplyCount} assistant replies)`));
     
     if (conv.firstMessageAt) {
       console.log(chalk.gray(`   First message: ${new Date(conv.firstMessageAt).toLocaleString()}`));
@@ -194,44 +194,56 @@ async function queryConversationMentions(replicaId: string, conversationId: stri
 
   console.log(chalk.green(`Found ${response.items.length} mention items\n`));
   
+  type MentionItem = 
+    | { index: number; type: 'message'; uuid: string; createdAt: string; content: string; role: string; senderName?: string; source: string }
+    | { index: number; type: 'placeholder'; count: number };
+
   const mentionData = {
     replicaId,
     conversationId,
     totalItems: response.items.length,
-    mentions: response.items.map((item, index) => {
-      if (item.type === 'message') {
-        return {
+    mentions: response.items.flatMap((item, index): MentionItem[] => {
+      if (item.type === 'mention') {
+        // Return one entry per message in the mention
+        return item.messages.map((message, msgIndex) => ({
           index: index + 1,
-          type: 'message',
-          uuid: item.uuid,
-          createdAt: item.createdAt,
-          content: item.content,
-          role: item.role,
-          senderName: item.senderName,
-          source: item.source
-        };
+          type: 'message' as const,
+          uuid: message.uuid,
+          createdAt: message.createdAt,
+          content: message.content,
+          role: message.role,
+          senderName: message.senderName,
+          source: message.source
+        }));
       } else {
-        return {
+        return [{
           index: index + 1,
-          type: 'placeholder',
+          type: 'placeholder' as const,
           count: item.count
-        };
+        }];
       }
     })
   };
 
   // Display mentions
-  response.items.forEach((item, index) => {
-    if (item.type === 'message') {
-      const roleColor = item.role === 'assistant' ? chalk.blue : chalk.green;
-      console.log(roleColor(`${index + 1}. [${item.role.toUpperCase()}] ${item.senderName || 'Unknown'}`));
-      console.log(chalk.gray(`   Time: ${new Date(item.createdAt).toLocaleString()}`));
-      console.log(chalk.gray(`   Source: ${item.source}`));
-      console.log(chalk.white(`   Content: ${item.content}`));
+  let displayIndex = 1;
+  response.items.forEach((item) => {
+    if (item.type === 'mention') {
+      // Display each message in the mention
+      item.messages.forEach((message) => {
+        const roleColor = message.role === 'assistant' ? chalk.blue : chalk.green;
+        console.log(roleColor(`${displayIndex}. [${message.role.toUpperCase()}] ${message.senderName || 'Unknown'}`));
+        console.log(chalk.gray(`   Time: ${new Date(message.createdAt).toLocaleString()}`));
+        console.log(chalk.gray(`   Source: ${message.source}`));
+        console.log(chalk.white(`   Content: ${message.content}`));
+        console.log();
+        displayIndex++;
+      });
     } else {
-      console.log(chalk.yellow(`${index + 1}. [PLACEHOLDER] ${item.count} messages collapsed`));
+      console.log(chalk.yellow(`${displayIndex}. [PLACEHOLDER] ${item.count} messages collapsed`));
+      console.log();
+      displayIndex++;
     }
-    console.log();
   });
 
   // Save to file if output specified

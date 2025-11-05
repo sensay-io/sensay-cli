@@ -1,7 +1,7 @@
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import chalk from 'chalk';
-import { TrainingService, KnowledgeBaseService } from '../generated/index';
+import { KnowledgeBaseService } from '../generated/index';
 import ora from 'ora';
 import inquirer from 'inquirer';
 
@@ -237,23 +237,23 @@ export class FileProcessor {
       console.log(chalk.gray(`   Uploading text: ${file.relativePath}...`));
     }
     
-    // Step 1: Create knowledge base entry
-    const createResponse = await TrainingService.postV1ReplicasTraining(replicaUuid);
-    
-    if (!createResponse.success || !createResponse.knowledgeBaseID) {
-      throw new Error('Failed to create knowledge base entry');
-    }
-    
-    // Step 2: Update with text content
-    await TrainingService.putV1ReplicasTraining(
+    // Create knowledge base entry and update with text content
+    const kbResponse = await KnowledgeBaseService.postV1ReplicasKnowledgeBase(
       replicaUuid,
-      createResponse.knowledgeBaseID,
+      '2025-03-25',
+      undefined,
       {
-        rawText: file.content
+        text: file.content,
+        autoRefresh: false
       }
     );
     
-    return createResponse.knowledgeBaseID;
+    const kbResult = kbResponse.results[0];
+    if ('error' in kbResult || !kbResult.knowledgeBaseID) {
+      throw new Error('Failed to create knowledge base entry');
+    }
+    
+    return kbResult.knowledgeBaseID;
   }
 
   private static async uploadFileTraining(replicaUuid: string, file: FileInfo, silent: boolean = false): Promise<number> {
@@ -265,6 +265,7 @@ export class FileProcessor {
     const fileKbResponse = await KnowledgeBaseService.postV1ReplicasKnowledgeBase(
       replicaUuid,
       '2025-03-25',
+      undefined,
       {
         filename: path.basename(file.path),
         autoRefresh: false
@@ -308,69 +309,77 @@ export class FileProcessor {
       let spinner: any = null;
       
       // Keep looping until no more training entries are found
+      let page = 1;
       while (true) {
         // Get training entries for this replica
-        const trainingResponse = await TrainingService.getV1Training1();
+        const trainingResponse = await KnowledgeBaseService.getV1KnowledgeBase1(undefined, undefined, undefined, undefined, page, 100);
         
         if (!trainingResponse.success) {
           throw new Error('Failed to fetch existing training data');
         }
         
-        // Filter entries for this replica
+        // Filter entries for this replica (field name is replicaUUID in new API)
         const replicaEntries = trainingResponse.items.filter(
-          (item: any) => item.replica_uuid === replicaUuid
+          (item: any) => item.replicaUUID === replicaUuid
         );
         
-        if (replicaEntries.length === 0) {
-          // No more entries found, we're done
+        // Process entries if found
+        if (replicaEntries.length > 0) {
+          if (!foundAnyEntries) {
+            // First batch found - show count and ask for confirmation
+            foundAnyEntries = true;
+            console.log(chalk.yellow(`📊 Found ${replicaEntries.length} existing training entries`));
+            
+            // Ask for confirmation unless force flag is set
+            if (!force) {
+              if (nonInteractive) {
+                throw new Error('Existing training data found. Use --force to automatically delete it, or run interactively to confirm.');
+              }
+              
+              const { confirmDelete } = await inquirer.prompt({
+                type: 'confirm',
+                name: 'confirmDelete',
+                message: 'This will delete all existing training data for this replica. Continue?',
+                default: false
+              });
+              
+              if (!confirmDelete) {
+                console.log(chalk.yellow('⚠️  Training data deletion cancelled by user'));
+                return;
+              }
+            }
+            
+            console.log(chalk.blue('🗑️  Clearing existing training data...'));
+            spinner = ora('Deleting training entries...').start();
+          }
+          
+          // Delete all entries in this batch
+          for (const entry of replicaEntries) {
+            try {
+              await KnowledgeBaseService.deleteV1KnowledgeBase(entry.id);
+              totalDeleted++;
+              spinner.text = `Deleting training entries... ${totalDeleted} deleted so far`;
+            } catch (error: any) {
+              totalFailed++;
+              console.log(chalk.red(`\n❌ Failed to delete entry ${entry.id}: ${error.message}`));
+              if (spinner) {
+                spinner.text = `Deleting training entries... ${totalDeleted} deleted, ${totalFailed} failed`;
+              }
+            }
+          }
+          
+          // Small delay to avoid overwhelming the API
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        // Check if we've reached the last page
+        if (trainingResponse.items.length < 100) {
+          // Last page - done
           break;
         }
         
-        if (!foundAnyEntries) {
-          // First batch found - show count and ask for confirmation
-          foundAnyEntries = true;
-          console.log(chalk.yellow(`📊 Found ${replicaEntries.length} existing training entries`));
-          
-          // Ask for confirmation unless force flag is set
-          if (!force) {
-            if (nonInteractive) {
-              throw new Error('Existing training data found. Use --force to automatically delete it, or run interactively to confirm.');
-            }
-            
-            const { confirmDelete } = await inquirer.prompt({
-              type: 'confirm',
-              name: 'confirmDelete',
-              message: 'This will delete all existing training data for this replica. Continue?',
-              default: false
-            });
-            
-            if (!confirmDelete) {
-              console.log(chalk.yellow('⚠️  Training data deletion cancelled by user'));
-              return;
-            }
-          }
-          
-          console.log(chalk.blue('🗑️  Clearing existing training data...'));
-          spinner = ora('Deleting training entries...').start();
-        }
-        
-        // Delete all entries in this batch
-        for (const entry of replicaEntries) {
-          try {
-            await TrainingService.deleteV1Training(entry.id);
-            totalDeleted++;
-            spinner.text = `Deleting training entries... ${totalDeleted} deleted so far`;
-          } catch (error: any) {
-            totalFailed++;
-            console.log(chalk.red(`\n❌ Failed to delete entry ${entry.id}: ${error.message}`));
-            if (spinner) {
-              spinner.text = `Deleting training entries... ${totalDeleted} deleted, ${totalFailed} failed`;
-            }
-          }
-        }
-        
-        // Small delay to avoid overwhelming the API
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Move to next page
+        page++;
       }
       
       if (!foundAnyEntries) {
@@ -421,14 +430,14 @@ export class FileProcessor {
           let page = 1;
           
           while (true) {
-            const trainingResponse = await TrainingService.getV1Training1(undefined, undefined, page.toString(), '100');
+            const trainingResponse = await KnowledgeBaseService.getV1KnowledgeBase1(undefined, undefined, undefined, undefined, page, 100);
             
             if (!trainingResponse.success) {
               throw new Error('Failed to fetch training status');
             }
             
             const replicaEntriesInPage = trainingResponse.items.filter(
-              (item: any) => item.replica_uuid === replicaUuid && knowledgeBaseIDs.includes(item.id)
+              (item: any) => item.replicaUUID === replicaUuid && knowledgeBaseIDs.includes(item.id)
             );
             
             allReplicaEntries.push(...replicaEntriesInPage);
@@ -553,14 +562,14 @@ export class FileProcessor {
       let page = 1;
       
       while (true) {
-        const trainingResponse = await TrainingService.getV1Training1(undefined, undefined, page.toString(), '100');
+        const trainingResponse = await KnowledgeBaseService.getV1KnowledgeBase1(undefined, undefined, undefined, undefined, page, 100);
         
         if (!trainingResponse.success) {
           break; // Don't fail the whole process if this verification fails
         }
         
         const replicaEntriesInPage = trainingResponse.items.filter(
-          (item: any) => item.replica_uuid === replicaUuid
+          (item: any) => item.replicaUUID === replicaUuid
         );
         
         allTrainingEntries.push(...replicaEntriesInPage);
