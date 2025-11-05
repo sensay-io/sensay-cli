@@ -106,6 +106,35 @@ function inferContentTypeFromFilename(filename: string): string {
   }
 }
 
+async function createKnowledgeBaseEntry(
+  replicaUuid: string,
+  requestBody: { text?: string; url?: string; filename?: string; autoRefresh?: boolean }
+): Promise<{ knowledgeBaseID: number; signedURL?: string }> {
+  const response = await KnowledgeBaseService.postV1ReplicasKnowledgeBase(
+    replicaUuid,
+    '2025-03-25',
+    undefined,
+    {
+      ...requestBody,
+      autoRefresh: requestBody.autoRefresh ?? false
+    }
+  );
+  
+  const result = response.results[0];
+  if ('error' in result) {
+    throw new Error(`Failed to create knowledge base: ${result.error}`);
+  }
+  
+  if (!result.knowledgeBaseID) {
+    throw new Error('Failed to get knowledge base ID from response');
+  }
+  
+  return {
+    knowledgeBaseID: result.knowledgeBaseID,
+    signedURL: result.signedURL
+  };
+}
+
 // Helper function to format API error details
 function formatApiError(error: any, prefix: string = ''): string {
   let errorMsg = error.message || 'Unknown error';
@@ -260,20 +289,11 @@ async function runKBTypeTest(
         trainingContent = `This is test content for E2E testing with ID ${testRunId}. The secret phrase is: RAINBOW_UNICORN_${testRunId}`;
         console.log(chalk.gray(`[${kbType}/${scenario.name}] Training with text content...`));
 
-        const textKbResponse = await KnowledgeBaseService.postV1ReplicasKnowledgeBase(
-          replicaUuid,
-          '2025-03-25',
-          undefined,
-          {
-            text: trainingContent,
-            autoRefresh: false
-          }
-        );
-        const kbResult = textKbResponse.results[0];
-        if ('error' in kbResult) {
-          throw new Error(`Failed to create knowledge base: ${kbResult.error}`);
-        }
-        kbId = kbResult.knowledgeBaseID!;
+        const textResult = await createKnowledgeBaseEntry(replicaUuid, {
+          text: trainingContent,
+          autoRefresh: false
+        });
+        kbId = textResult.knowledgeBaseID;
         break;
 
       case 'website':
@@ -284,40 +304,22 @@ async function runKBTypeTest(
         const testUrl = `https://httpbin.org/base64/${base64Content}`;
         console.log(chalk.gray(`[${kbType}/${scenario.name}] Training with website URL (httpbin.org test)...`));
 
-        const websiteKbResponse = await KnowledgeBaseService.postV1ReplicasKnowledgeBase(
-          replicaUuid,
-          '2025-03-25',
-          undefined,
-          {
-            url: testUrl,
-            autoRefresh: false
-          }
-        );
-        const websiteResult = websiteKbResponse.results[0];
-        if ('error' in websiteResult) {
-          throw new Error(`Failed to create website knowledge base: ${websiteResult.error}`);
-        }
-        kbId = websiteResult.knowledgeBaseID!;
+        const websiteResult = await createKnowledgeBaseEntry(replicaUuid, {
+          url: testUrl,
+          autoRefresh: false
+        });
+        kbId = websiteResult.knowledgeBaseID;
         break;
 
       case 'youtube':
         const youtubeUrl = scenario.url!;
         console.log(chalk.gray(`[${kbType}/${scenario.name}] Training with YouTube URL: ${youtubeUrl}`));
 
-        const youtubeKbResponse = await KnowledgeBaseService.postV1ReplicasKnowledgeBase(
-          replicaUuid,
-          '2025-03-25',
-          undefined,
-          {
-            url: youtubeUrl,
-            autoRefresh: false
-          }
-        );
-        const youtubeResult = youtubeKbResponse.results[0];
-        if ('error' in youtubeResult) {
-          throw new Error(`Failed to create YouTube knowledge base: ${youtubeResult.error}`);
-        }
-        kbId = youtubeResult.knowledgeBaseID!;
+        const youtubeResult = await createKnowledgeBaseEntry(replicaUuid, {
+          url: youtubeUrl,
+          autoRefresh: false
+        });
+        kbId = youtubeResult.knowledgeBaseID;
         break;
 
       case 'file':
@@ -327,20 +329,10 @@ async function runKBTypeTest(
           console.log(chalk.gray(`[${kbType}/${scenario.name}] Training with file: ${providedFileName}`));
 
           // Create knowledge base entry for file upload
-          const fileKbResponse = await KnowledgeBaseService.postV1ReplicasKnowledgeBase(
-            replicaUuid,
-            '2025-03-25',
-            undefined,
-            {
-              filename: providedFileName,
-              autoRefresh: false
-            }
-          );
-
-          const fileResult = fileKbResponse.results[0];
-          if ('error' in fileResult) {
-            throw new Error(`Failed to create file knowledge base: ${fileResult.error}`);
-          }
+          const fileResult = await createKnowledgeBaseEntry(replicaUuid, {
+            filename: providedFileName,
+            autoRefresh: false
+          });
 
           if (!fileResult.signedURL) {
             throw new Error('Failed to get signed URL for file upload');
@@ -364,7 +356,7 @@ async function runKBTypeTest(
             throw new Error(`File upload failed: ${uploadResponse.status} ${uploadResponse.statusText}${errorText ? ` - ${errorText}` : ''}`);
           }
 
-          kbId = fileResult.knowledgeBaseID!;
+          kbId = fileResult.knowledgeBaseID;
         } else {
           // Fallback to legacy behavior: create a temporary text file
           const tempDir = path.join(process.cwd(), '.e2e-temp');
@@ -378,20 +370,10 @@ async function runKBTypeTest(
 
           try {
             // Create knowledge base entry for file upload
-            const fileKbResponse = await KnowledgeBaseService.postV1ReplicasKnowledgeBase(
-              replicaUuid,
-              '2025-03-25',
-              undefined,
-              {
-                filename: testFileName,
-                autoRefresh: false
-              }
-            );
-
-            const fileResult = fileKbResponse.results[0];
-            if ('error' in fileResult) {
-              throw new Error(`Failed to create file knowledge base: ${fileResult.error}`);
-            }
+            const fileResult = await createKnowledgeBaseEntry(replicaUuid, {
+              filename: testFileName,
+              autoRefresh: false
+            });
 
             if (!fileResult.signedURL) {
               throw new Error('Failed to get signed URL for file upload');
@@ -414,7 +396,7 @@ async function runKBTypeTest(
               throw new Error(`File upload failed: ${uploadResponse.status} ${uploadResponse.statusText}${errorText ? ` - ${errorText}` : ''}`);
             }
 
-            kbId = fileResult.knowledgeBaseID!;
+            kbId = fileResult.knowledgeBaseID;
 
             // Clean up temp file
             await fs.remove(testFilePath);
