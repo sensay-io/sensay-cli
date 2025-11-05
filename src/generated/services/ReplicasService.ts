@@ -91,7 +91,7 @@ export class ReplicasService {
              */
             tags?: Array<string>;
             /**
-             * The URL of the profile image of the replica. The image will be downloaded, optimized and stored on our servers, so the URL in the response will be different. Supported formats: .jpg, .jpeg, .png, .bmp, .webp, .avif
+             * The URL of the profile image of the replica. The image will be downloaded, optimized and stored on our servers, so the URL in the response will be different. Supported formats: image/jpeg, image/jpg, image/pjpeg, image/png, image/bmp, image/x-windows-bmp, image/x-bmp, image/x-bitmap, image/x-ms-bmp, image/webp, image/avif
              */
             profileImage?: string;
             /**
@@ -102,7 +102,7 @@ export class ReplicasService {
                 /**
                  * The LLM model of the replica.
                  */
-                model?: 'gpt-4o' | 'claude-3-5-haiku-latest' | 'claude-3-7-sonnet-latest' | 'claude-4-sonnet-20250514' | 'grok-2-latest' | 'grok-3-beta' | 'deepseek-chat' | 'o3-mini' | 'gpt-4o-mini' | 'huggingface-eva' | 'huggingface-dolphin-llama';
+                model?: ('asi1-mini' | 'claude-3-7-sonnet-latest' | 'claude-haiku-4-5' | 'claude-sonnet-4-5' | 'deepseek-chat' | 'gemini-2.5-flash' | 'gemini-2.5-pro' | 'gpt-4o' | 'gpt-4o-mini' | 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano' | 'grok-3-latest' | 'grok-4-latest' | 'o3-mini' | 'targon-gpt-oss-120b' | 'mistral-large' | 'claude-4-sonnet-20250514' | 'grok-2-latest' | 'grok-3-beta');
                 /**
                  * Deprecated. The system will automatically choose the best approach.
                  * @deprecated
@@ -117,15 +117,57 @@ export class ReplicasService {
                  *
                  */
                 tools?: Array<'getTokenInfo' | 'getUdaoTokenInfo' | 'getSensayTokenInfo' | 'getTokenInfoMEAI' | 'answerToLife' | 'toolhouse' | 'brightUnionGetQuoteTool' | 'brightUnionGetCoverablesTool'>;
+                /**
+                 * The embedding model used for semantic search and knowledge base operations.
+                 */
+                embeddingModel?: 'multilingual-e5-large' | 'qwen3-embedding-8b';
             };
             /**
              * Text that can be used to generate a voice preview.
              */
             voicePreviewText?: string;
             /**
+             * Whether the replica conversations are accessible to customer support
+             * @deprecated
+             */
+            isAccessibleByCustomerSupport?: boolean;
+            /**
+             * Whether the replica conversations are accessible to customer support
+             */
+            isEveryConversationAccessibleBySupport?: boolean;
+            /**
+             * Whether private conversations are enabled for this replica (conversations not accessible to customer support)
+             * @deprecated
+             */
+            isPrivateConversationsEnabled?: boolean;
+            /**
+             * Introductory audio ID maintained and stored by the consumer of the API, not in the API ecosystem itself. Used for keeping track of introductory audio IDs.
+             */
+            introductionAudioID?: string | null;
+            /**
              * The replica UUID
              */
             uuid: string;
+            /**
+             * The ElevenLabs voice ID associated with this replica.
+             */
+            elevenLabsID?: string;
+            /**
+             * The ElevenLabs custom voice ID associated with this replica.
+             */
+            elevenLabsCustomID?: string;
+            /**
+             * The HeyGen avatar ID associated with this replica.
+             */
+            heygenAvatarID?: string;
+            /**
+             * The ElevenLabs voice ID associated with this replica.
+             */
+            voiceManager?: 'sensay' | 'elevenlabs';
+            /**
+             * The distilled knowledge of the replica
+             */
+            distilledKnowledge?: string;
             /**
              * The URL of the profile image of the replica. Please use `profileImage` instead.
              * @deprecated
@@ -170,15 +212,18 @@ export class ReplicasService {
             /**
              * The Discord integration of the replica.
              */
-            discord_integration: any | null;
+            discord_integration: {
+                token: string | null;
+                service_name: string | null;
+                is_active: boolean | null;
+            } | null;
             /**
              * The Telegram integration of the replica.
              */
-            telegram_integration: any | null;
-            /**
-             * The ElevenLabs voice ID associated with this replica.
-             */
-            elevenLabsID?: string | null;
+            telegram_integration: {
+                token: string | null;
+                service_name: string | null;
+            } | null;
         }>;
         /**
          * The total number of replica items available across all pages
@@ -216,12 +261,14 @@ export class ReplicasService {
      * Create a replica
      * Creates a new replica.
      * @param xApiVersion
+     * @param contentEncoding Content encoding for request body compression. Optional - when used, client is responsible for gzipping and sending binary data.
      * @param requestBody
      * @returns any The created replica
      * @throws ApiError
      */
     public static postV1Replicas(
         xApiVersion: string = '2025-03-25',
+        contentEncoding?: 'gzip',
         requestBody?: {
             /**
              * The name of the replica.
@@ -268,7 +315,7 @@ export class ReplicasService {
              */
             tags?: Array<string>;
             /**
-             * The URL of the profile image of the replica. The image will be downloaded, optimized and stored on our servers, so the URL in the response will be different. Supported formats: .jpg, .jpeg, .png, .bmp, .webp, .avif
+             * The URL of the profile image of the replica. The image will be downloaded, optimized and stored on our servers, so the URL in the response will be different. Supported formats: image/jpeg, image/jpg, image/pjpeg, image/png, image/bmp, image/x-windows-bmp, image/x-bmp, image/x-bitmap, image/x-ms-bmp, image/webp, image/avif
              */
             profileImage?: string;
             /**
@@ -279,7 +326,7 @@ export class ReplicasService {
                 /**
                  * The LLM model of the replica.
                  */
-                model?: 'gpt-4o' | 'claude-3-5-haiku-latest' | 'claude-3-7-sonnet-latest' | 'claude-4-sonnet-20250514' | 'grok-2-latest' | 'grok-3-beta' | 'deepseek-chat' | 'o3-mini' | 'gpt-4o-mini' | 'huggingface-eva' | 'huggingface-dolphin-llama';
+                model?: ('asi1-mini' | 'claude-3-7-sonnet-latest' | 'claude-haiku-4-5' | 'claude-sonnet-4-5' | 'deepseek-chat' | 'gemini-2.5-flash' | 'gemini-2.5-pro' | 'gpt-4o' | 'gpt-4o-mini' | 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano' | 'grok-3-latest' | 'grok-4-latest' | 'o3-mini' | 'targon-gpt-oss-120b' | 'mistral-large' | 'claude-4-sonnet-20250514' | 'grok-2-latest' | 'grok-3-beta');
                 /**
                  * Deprecated. The system will automatically choose the best approach.
                  * @deprecated
@@ -294,11 +341,33 @@ export class ReplicasService {
                  *
                  */
                 tools?: Array<'getTokenInfo' | 'getUdaoTokenInfo' | 'getSensayTokenInfo' | 'getTokenInfoMEAI' | 'answerToLife' | 'toolhouse' | 'brightUnionGetQuoteTool' | 'brightUnionGetCoverablesTool'>;
+                /**
+                 * The embedding model used for semantic search and knowledge base operations.
+                 */
+                embeddingModel?: 'multilingual-e5-large' | 'qwen3-embedding-8b';
             };
             /**
              * Text that can be used to generate a voice preview.
              */
             voicePreviewText?: string;
+            /**
+             * Whether the replica conversations are accessible to customer support
+             * @deprecated
+             */
+            isAccessibleByCustomerSupport?: boolean;
+            /**
+             * Whether the replica conversations are accessible to customer support
+             */
+            isEveryConversationAccessibleBySupport?: boolean;
+            /**
+             * Whether private conversations are enabled for this replica (conversations not accessible to customer support)
+             * @deprecated
+             */
+            isPrivateConversationsEnabled?: boolean;
+            /**
+             * Introductory audio ID maintained and stored by the consumer of the API, not in the API ecosystem itself. Used for keeping track of introductory audio IDs.
+             */
+            introductionAudioID?: string | null;
         },
     ): CancelablePromise<{
         /**
@@ -315,6 +384,7 @@ export class ReplicasService {
             url: '/v1/replicas',
             headers: {
                 'X-API-Version': xApiVersion,
+                'Content-Encoding': contentEncoding,
             },
             body: requestBody,
             mediaType: 'application/json',
@@ -324,6 +394,7 @@ export class ReplicasService {
                 404: `Not Found`,
                 409: `Conflict`,
                 415: `Unsupported Media Type`,
+                429: `Too Many Requests`,
                 500: `Internal Server Error`,
             },
         });
@@ -331,7 +402,7 @@ export class ReplicasService {
     /**
      * Get a replica
      * Get an existing replica.
-     * @param replicaUuid
+     * @param replicaUuid The replica unique identifier (UUID)
      * @param xApiVersion
      * @returns any The requested replica
      * @throws ApiError
@@ -385,7 +456,7 @@ export class ReplicasService {
          */
         tags?: Array<string>;
         /**
-         * The URL of the profile image of the replica. The image will be downloaded, optimized and stored on our servers, so the URL in the response will be different. Supported formats: .jpg, .jpeg, .png, .bmp, .webp, .avif
+         * The URL of the profile image of the replica. The image will be downloaded, optimized and stored on our servers, so the URL in the response will be different. Supported formats: image/jpeg, image/jpg, image/pjpeg, image/png, image/bmp, image/x-windows-bmp, image/x-bmp, image/x-bitmap, image/x-ms-bmp, image/webp, image/avif
          */
         profileImage?: string;
         /**
@@ -396,7 +467,7 @@ export class ReplicasService {
             /**
              * The LLM model of the replica.
              */
-            model?: 'gpt-4o' | 'claude-3-5-haiku-latest' | 'claude-3-7-sonnet-latest' | 'claude-4-sonnet-20250514' | 'grok-2-latest' | 'grok-3-beta' | 'deepseek-chat' | 'o3-mini' | 'gpt-4o-mini' | 'huggingface-eva' | 'huggingface-dolphin-llama';
+            model?: ('asi1-mini' | 'claude-3-7-sonnet-latest' | 'claude-haiku-4-5' | 'claude-sonnet-4-5' | 'deepseek-chat' | 'gemini-2.5-flash' | 'gemini-2.5-pro' | 'gpt-4o' | 'gpt-4o-mini' | 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano' | 'grok-3-latest' | 'grok-4-latest' | 'o3-mini' | 'targon-gpt-oss-120b' | 'mistral-large' | 'claude-4-sonnet-20250514' | 'grok-2-latest' | 'grok-3-beta');
             /**
              * Deprecated. The system will automatically choose the best approach.
              * @deprecated
@@ -411,15 +482,61 @@ export class ReplicasService {
              *
              */
             tools?: Array<'getTokenInfo' | 'getUdaoTokenInfo' | 'getSensayTokenInfo' | 'getTokenInfoMEAI' | 'answerToLife' | 'toolhouse' | 'brightUnionGetQuoteTool' | 'brightUnionGetCoverablesTool'>;
+            /**
+             * The embedding model used for semantic search and knowledge base operations.
+             */
+            embeddingModel?: 'multilingual-e5-large' | 'qwen3-embedding-8b';
         };
         /**
          * Text that can be used to generate a voice preview.
          */
         voicePreviewText?: string;
         /**
+         * Whether the replica conversations are accessible to customer support
+         * @deprecated
+         */
+        isAccessibleByCustomerSupport?: boolean;
+        /**
+         * Whether the replica conversations are accessible to customer support
+         */
+        isEveryConversationAccessibleBySupport?: boolean;
+        /**
+         * Whether private conversations are enabled for this replica (conversations not accessible to customer support)
+         * @deprecated
+         */
+        isPrivateConversationsEnabled?: boolean;
+        /**
+         * Introductory audio ID maintained and stored by the consumer of the API, not in the API ecosystem itself. Used for keeping track of introductory audio IDs.
+         */
+        introductionAudioID?: string | null;
+        /**
          * The replica UUID
          */
         uuid: string;
+        /**
+         * The ElevenLabs voice ID associated with this replica.
+         */
+        elevenLabsID?: string;
+        /**
+         * The ElevenLabs custom voice ID associated with this replica.
+         */
+        elevenLabsCustomID?: string;
+        /**
+         * The HeyGen avatar ID associated with this replica.
+         */
+        heygenAvatarID?: string;
+        /**
+         * The ElevenLabs voice ID associated with this replica.
+         */
+        voiceManager?: 'sensay' | 'elevenlabs';
+        /**
+         * The distilled knowledge of the replica
+         */
+        distilledKnowledge?: string;
+        /**
+         * Indicates the request was successful
+         */
+        success: boolean;
     }> {
         return __request(OpenAPI, {
             method: 'GET',
@@ -442,7 +559,7 @@ export class ReplicasService {
     /**
      * Delete a replica
      * Deletes a replica by UUID.
-     * @param replicaUuid
+     * @param replicaUuid The replica unique identifier (UUID)
      * @param xApiVersion
      * @returns any Replica has been deleted
      * @throws ApiError
@@ -477,8 +594,9 @@ export class ReplicasService {
     /**
      * Updates a replica
      * Updates an existing replica.
-     * @param replicaUuid
+     * @param replicaUuid The replica unique identifier (UUID)
      * @param xApiVersion
+     * @param contentEncoding Content encoding for request body compression. Optional - when used, client is responsible for gzipping and sending binary data.
      * @param requestBody
      * @returns any The request outcome
      * @throws ApiError
@@ -486,6 +604,7 @@ export class ReplicasService {
     public static putV1Replicas(
         replicaUuid: replicaUUID_parameter,
         xApiVersion: string = '2025-03-25',
+        contentEncoding?: 'gzip',
         requestBody?: {
             /**
              * The name of the replica.
@@ -532,18 +651,40 @@ export class ReplicasService {
              */
             tags?: Array<string>;
             /**
-             * The URL of the profile image of the replica. The image will be downloaded, optimized and stored on our servers, so the URL in the response will be different. Supported formats: .jpg, .jpeg, .png, .bmp, .webp, .avif
+             * The URL of the profile image of the replica. The image will be downloaded, optimized and stored on our servers, so the URL in the response will be different. Supported formats: image/jpeg, image/jpg, image/pjpeg, image/png, image/bmp, image/x-windows-bmp, image/x-bmp, image/x-bitmap, image/x-ms-bmp, image/webp, image/avif
              */
             profileImage?: string;
             /**
              * Suggested questions when starting a conversation.
              */
             suggestedQuestions?: Array<string>;
+            /**
+             * Text that can be used to generate a voice preview.
+             */
+            voicePreviewText?: string;
+            /**
+             * Whether the replica conversations are accessible to customer support
+             * @deprecated
+             */
+            isAccessibleByCustomerSupport?: boolean;
+            /**
+             * Whether the replica conversations are accessible to customer support
+             */
+            isEveryConversationAccessibleBySupport?: boolean;
+            /**
+             * Whether private conversations are enabled for this replica (conversations not accessible to customer support)
+             * @deprecated
+             */
+            isPrivateConversationsEnabled?: boolean;
+            /**
+             * Introductory audio ID maintained and stored by the consumer of the API, not in the API ecosystem itself. Used for keeping track of introductory audio IDs.
+             */
+            introductionAudioID?: string | null;
             llm: {
                 /**
                  * The LLM model of the replica.
                  */
-                model?: 'gpt-4o' | 'claude-3-5-haiku-latest' | 'claude-3-7-sonnet-latest' | 'claude-4-sonnet-20250514' | 'grok-2-latest' | 'grok-3-beta' | 'deepseek-chat' | 'o3-mini' | 'gpt-4o-mini' | 'huggingface-eva' | 'huggingface-dolphin-llama';
+                model?: ('asi1-mini' | 'claude-3-7-sonnet-latest' | 'claude-haiku-4-5' | 'claude-sonnet-4-5' | 'deepseek-chat' | 'gemini-2.5-flash' | 'gemini-2.5-pro' | 'gpt-4o' | 'gpt-4o-mini' | 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano' | 'grok-3-latest' | 'grok-4-latest' | 'o3-mini' | 'targon-gpt-oss-120b' | 'mistral-large' | 'claude-4-sonnet-20250514' | 'grok-2-latest' | 'grok-3-beta');
                 /**
                  * Deprecated. The system will automatically choose the best approach.
                  * @deprecated
@@ -558,11 +699,11 @@ export class ReplicasService {
                  *
                  */
                 tools?: Array<'getTokenInfo' | 'getUdaoTokenInfo' | 'getSensayTokenInfo' | 'getTokenInfoMEAI' | 'answerToLife' | 'toolhouse' | 'brightUnionGetQuoteTool' | 'brightUnionGetCoverablesTool'>;
+                /**
+                 * The embedding model used for semantic search and knowledge base operations. Cannot be changed once set.
+                 */
+                embeddingModel?: 'multilingual-e5-large' | 'qwen3-embedding-8b';
             };
-            /**
-             * Text that can be used to generate a voice preview.
-             */
-            voicePreviewText?: string;
         },
     ): CancelablePromise<{
         /**
@@ -578,6 +719,7 @@ export class ReplicasService {
             },
             headers: {
                 'X-API-Version': xApiVersion,
+                'Content-Encoding': contentEncoding,
             },
             body: requestBody,
             mediaType: 'application/json',

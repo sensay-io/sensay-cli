@@ -910,6 +910,8 @@ export class EntityDialog {
         parentUuid,
         undefined, // status
         undefined, // type
+        undefined, // search
+        undefined, // hasError
         this.currentLevel.currentPage, // page
         this.pageSize, // pageSize
         'createdAt', // sortBy

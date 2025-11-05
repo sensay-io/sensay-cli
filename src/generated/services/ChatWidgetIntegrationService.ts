@@ -10,7 +10,7 @@ export class ChatWidgetIntegrationService {
     /**
      * Get Embed chat history
      * List embed chat history items of a Replica belonging to the logged in user.
-     * @param replicaUuid
+     * @param replicaUuid The replica unique identifier (UUID)
      * @returns any List the chat history of the replica by the currently logged in user
      * @throws ApiError
      */

@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import inquirer from 'inquirer';
 import { ConfigManager } from '../config/manager';
-import { TrainingService, ReplicasService, KnowledgeBaseService } from '../generated/index';
+import { ReplicasService, KnowledgeBaseService } from '../generated/index';
 import { ProgressManager } from '../utils/progress';
 import { configureOpenAPI } from '../utils/openapi-config';
 import chalk from 'chalk';
@@ -132,6 +132,8 @@ export async function retrainFailedCommand(folderPath: string, options: RetrainF
           const response = await KnowledgeBaseService.getV1ReplicasKnowledgeBase(
             replica.uuid,
             undefined,  // Get all statuses for now
+            undefined, 
+            undefined,
             undefined,
             page,
             pageSize
@@ -214,8 +216,10 @@ export async function retrainFailedCommand(folderPath: string, options: RetrainF
           await KnowledgeBaseService.patchV1ReplicasKnowledgeBase(
             item.id || item.knowledgeBaseID,  // Handle both field names
             replica.uuid,
+            '2025-03-25',
+            undefined,
             {
-              status: 'NEW'
+              rawText: undefined 
             }
           );
           retrainedCount++;

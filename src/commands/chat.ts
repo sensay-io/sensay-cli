@@ -93,6 +93,7 @@ export async function chatCommand(folderPath?: string, options: ChatOptions = {}
       const response = await ChatCompletionsService.postV1ReplicasChatCompletions(
         replica.uuid,
         '2025-03-25',
+        undefined,
         {
           content: message,
           source: 'web'
@@ -129,6 +130,7 @@ export async function chatCommand(folderPath?: string, options: ChatOptions = {}
           const response = await ChatCompletionsService.postV1ReplicasChatCompletions(
             replica.uuid,
             '2025-03-25',
+            undefined,
             {
               content: trimmedMessage,
               source: 'web'

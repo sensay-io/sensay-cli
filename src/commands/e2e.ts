@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { ApiError, UsersService, ReplicasService, KnowledgeBaseService, ChatCompletionsService, TrainingService } from '../generated/index';
+import { ApiError, UsersService, ReplicasService, KnowledgeBaseService, ChatCompletionsService } from '../generated/index';
 import { ConfigManager } from '../config/manager';
 import { configureOpenAPI } from '../utils/openapi-config';
 import chalk from 'chalk';
@@ -206,14 +206,14 @@ async function runKBTypeTest(
     const replicaName = `E2E ${kbType}/${scenario.name} ${testRunId}`;
     console.log(chalk.gray(`[${kbType}/${scenario.name}] Creating replica: ${replicaName}`));
 
-    const replicaResponse = await ReplicasService.postV1Replicas('2025-03-25', {
+    const replicaResponse = await ReplicasService.postV1Replicas('2025-03-25', undefined, {
       name: replicaName,
       shortDescription: `Test replica for ${kbType} KB type`,
       greeting: `Hello! I'm a test replica trained on ${kbType} content.`,
       ownerID: userId,
       slug: `e2e-test-${kbType}-${scenario.name}-${testRunId}`,
       llm: {
-        model: 'claude-haiku-4.5',
+        model: 'claude-haiku-4-5',
         memoryMode: 'rag-search',
         systemMessage: `You are a test replica created for E2E testing. You have been trained on ${kbType} content.`,
         tools: []
@@ -263,6 +263,7 @@ async function runKBTypeTest(
         const textKbResponse = await KnowledgeBaseService.postV1ReplicasKnowledgeBase(
           replicaUuid,
           '2025-03-25',
+          undefined,
           {
             text: trainingContent,
             autoRefresh: false
@@ -286,6 +287,7 @@ async function runKBTypeTest(
         const websiteKbResponse = await KnowledgeBaseService.postV1ReplicasKnowledgeBase(
           replicaUuid,
           '2025-03-25',
+          undefined,
           {
             url: testUrl,
             autoRefresh: false
@@ -305,6 +307,7 @@ async function runKBTypeTest(
         const youtubeKbResponse = await KnowledgeBaseService.postV1ReplicasKnowledgeBase(
           replicaUuid,
           '2025-03-25',
+          undefined,
           {
             url: youtubeUrl,
             autoRefresh: false
@@ -327,6 +330,7 @@ async function runKBTypeTest(
           const fileKbResponse = await KnowledgeBaseService.postV1ReplicasKnowledgeBase(
             replicaUuid,
             '2025-03-25',
+            undefined,
             {
               filename: providedFileName,
               autoRefresh: false
@@ -377,6 +381,7 @@ async function runKBTypeTest(
             const fileKbResponse = await KnowledgeBaseService.postV1ReplicasKnowledgeBase(
               replicaUuid,
               '2025-03-25',
+              undefined,
               {
                 filename: testFileName,
                 autoRefresh: false
@@ -670,6 +675,7 @@ async function runKBTypeTest(
     const chatResponse = await ChatCompletionsService.postV1ReplicasChatCompletions(
       replicaUuid,
       '2025-03-25',
+      undefined,
       {
         content: testMessage,
         source: 'web'
@@ -958,7 +964,7 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
       console.log(chalk.gray(`  Name: ${testUserName}`));
       console.log(chalk.gray(`  Email: ${testEmail}`));
 
-      const userResponse = await UsersService.postV1Users('2025-03-25', {
+      const userResponse = await UsersService.postV1Users('2025-03-25', undefined, {
         name: testUserName,
         email: testEmail
       });

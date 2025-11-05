@@ -10,7 +10,7 @@ export class AnalyticsService {
     /**
      * Get replica historical conversation analytics
      * Returns cumulative conversation count for the last 30 days, up to and including today.
-     * @param replicaUuid
+     * @param replicaUuid The replica unique identifier (UUID)
      * @param xApiVersion
      * @returns any Historical conversation analytics data
      * @throws ApiError
@@ -18,16 +18,25 @@ export class AnalyticsService {
     public static getV1ReplicasAnalyticsConversationsHistorical(
         replicaUuid: replicaUUID_parameter,
         xApiVersion: string = '2025-03-25',
-    ): CancelablePromise<Array<{
+    ): CancelablePromise<{
         /**
-         * The date in YYYY-MM-DD format.
+         * Indicates the status of the request
          */
-        date: string;
+        success: boolean;
         /**
-         * The cumulative number of conversations up to this date.
+         * List of daily cumulative conversation counts for the last 30 days. The cutoff for counting conversations towards a specific day is UTC midnight.
          */
-        cumulativeConversations: number;
-    }>> {
+        items: Array<{
+            /**
+             * The date in YYYY-MM-DD format.
+             */
+            date: string;
+            /**
+             * The cumulative number of conversations up to this date.
+             */
+            cumulativeConversations: number;
+        }>;
+    }> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/v1/replicas/{replicaUUID}/analytics/conversations/historical',
@@ -49,7 +58,7 @@ export class AnalyticsService {
     /**
      * Get replica source analytics
      * Returns interaction counts by source for the replica.
-     * @param replicaUuid
+     * @param replicaUuid The replica unique identifier (UUID)
      * @param xApiVersion
      * @returns any Source analytics data
      * @throws ApiError
@@ -57,16 +66,25 @@ export class AnalyticsService {
     public static getV1ReplicasAnalyticsConversationsSources(
         replicaUuid: replicaUUID_parameter,
         xApiVersion: string = '2025-03-25',
-    ): CancelablePromise<Array<{
+    ): CancelablePromise<{
         /**
-         * The source of the conversations.
+         * Indicates the status of the request
          */
-        source: 'discord' | 'telegram' | 'embed' | 'web' | 'telegram_autopilot';
+        success: boolean;
         /**
-         * The total number of conversations from this source.
+         * List of conversation counts by source for the replica, as of today.
          */
-        conversations: number;
-    }>> {
+        items: Array<{
+            /**
+             * The source of the conversations.
+             */
+            source: 'discord' | 'telegram' | 'embed' | 'web' | 'telegram_autopilot';
+            /**
+             * The total number of conversations from this source.
+             */
+            conversations: number;
+        }>;
+    }> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/v1/replicas/{replicaUUID}/analytics/conversations/sources',

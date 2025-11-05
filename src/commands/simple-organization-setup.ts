@@ -47,7 +47,7 @@ async function scanForReplicaFolders(targetPath: string): Promise<ReplicaFolder[
           const systemMessage = await fs.readFile(systemMessagePath, 'utf-8');
           
           // Check for model.txt file
-          let modelName = 'claude-3-5-haiku-latest'; // default
+          let modelName = 'claude-haiku-4-5'; // default
           const modelPath = path.join(folderPath, 'model.txt');
           if (await fs.pathExists(modelPath)) {
             const modelContent = await fs.readFile(modelPath, 'utf-8');
@@ -178,7 +178,7 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
       userSpinner.succeed(`User found: ${user.name || user.id}`);
     } catch (error) {
       try {
-        user = await UsersService.postV1Users('2025-03-25', {
+        user = await UsersService.postV1Users('2025-03-25', undefined, {
           name: userName!,
           email: userEmail!
         });
@@ -226,14 +226,14 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
           // Replica exists, update it
           replicaSpinner.text = `Updating existing replica: ${replicaFolder.name}...`;
           
-          await ReplicasService.putV1Replicas(existingReplica.uuid, '2025-03-25', {
+          await ReplicasService.putV1Replicas(existingReplica.uuid, '2025-03-25', undefined, {
             name: replicaFolder.name,
             shortDescription: existingReplica.shortDescription || `AI replica for ${replicaFolder.name}`,
             greeting: existingReplica.greeting || 'Hello! How can I help you today?',
             ownerID: user.id,
             slug: existingReplica.slug, // Keep the existing slug
             llm: {
-              model: replicaFolder.modelName as any || 'claude-3-5-haiku-latest',
+              model: replicaFolder.modelName as any || 'claude-haiku-4-5',
               memoryMode: 'rag-search',
               systemMessage: replicaFolder.systemMessage || 'You are a helpful AI assistant.',
               tools: []
@@ -247,14 +247,14 @@ export async function simpleOrganizationSetupCommand(folderPath?: string, option
           replicaSpinner.text = `Creating new replica: ${replicaFolder.name}...`;
           const slug = replicaFolder.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
           
-          const replicaCreateResponse = await ReplicasService.postV1Replicas('2025-03-25', { 
+          const replicaCreateResponse = await ReplicasService.postV1Replicas('2025-03-25', undefined, { 
             name: replicaFolder.name,
             shortDescription: `AI replica for ${replicaFolder.name}`,
             greeting: 'Hello! How can I help you today?',
             ownerID: user.id,
             slug: slug,
             llm: {
-              model: replicaFolder.modelName as any || 'claude-3-5-haiku-latest',
+              model: replicaFolder.modelName as any || 'claude-haiku-4-5',
               memoryMode: 'rag-search',
               systemMessage: replicaFolder.systemMessage || 'You are a helpful AI assistant.',
               tools: []
@@ -446,7 +446,7 @@ Set up a complete organization with user account and multiple replicas. This com
 creates a user and processes each subfolder as a separate replica. Each replica folder
 should contain:
   - system-message.txt (required): The system prompt for the replica
-  - model.txt (optional): The model name (defaults to claude-3-5-haiku-latest)
+  - model.txt (optional): The model name (defaults to claude-haiku-4-5)
   - training-data/ (optional): Folder containing training files
 
 Options:

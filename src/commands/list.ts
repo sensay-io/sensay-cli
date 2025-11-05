@@ -3,8 +3,8 @@ import chalk from 'chalk';
 import { 
   ApiError, 
   ReplicasService, 
-  UsersService, 
-  TrainingService 
+  UsersService,
+  KnowledgeBaseService
 } from '../generated/index';
 import { ConfigManager } from '../config/manager';
 import { configureOpenAPI } from '../utils/openapi-config';
@@ -182,14 +182,14 @@ async function listTrainingItemsForReplica(replicaUuid: string): Promise<void> {
     let page = 1;
     
     while (true) {
-      const trainingResponse = await TrainingService.getV1Training1(undefined, undefined, page.toString(), '100');
+      const trainingResponse = await KnowledgeBaseService.getV1KnowledgeBase1(undefined, undefined, undefined, undefined, page, 100);
       
       if (!trainingResponse.success || !trainingResponse.items) {
         break;
       }
       
       // Filter by this replica
-      const relevantEntries = trainingResponse.items.filter((item: any) => item.replica_uuid === replicaUuid);
+      const relevantEntries = trainingResponse.items.filter((item: any) => item.replicaUUID === replicaUuid);
       allEntries.push(...relevantEntries);
       
       // If we got fewer items than the limit, we've reached the end
@@ -255,7 +255,7 @@ async function listTrainingItems(replicaId?: string): Promise<void> {
     let page = 1;
     
     while (true) {
-      const trainingResponse = await TrainingService.getV1Training1(undefined, undefined, page.toString(), '100');
+      const trainingResponse = await KnowledgeBaseService.getV1KnowledgeBase1(undefined, undefined, undefined, undefined, page, 100);
       
       if (!trainingResponse.success || !trainingResponse.items) {
         break;
@@ -263,7 +263,7 @@ async function listTrainingItems(replicaId?: string): Promise<void> {
       
       // Filter by replica if specified
       const relevantEntries = replicaId 
-        ? trainingResponse.items.filter((item: any) => item.replica_uuid === replicaId)
+        ? trainingResponse.items.filter((item: any) => item.replicaUUID === replicaId)
         : trainingResponse.items;
       
       allEntries.push(...relevantEntries);

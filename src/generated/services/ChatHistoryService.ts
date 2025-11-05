@@ -10,7 +10,7 @@ export class ChatHistoryService {
     /**
      * Get chat history
      * List chat history items of a Replica belonging to the logged in user.
-     * @param replicaUuid
+     * @param replicaUuid The replica unique identifier (UUID)
      * @param xApiVersion
      * @returns any List the chat history of the replica by the currently logged in user
      * @throws ApiError
@@ -110,8 +110,9 @@ export class ChatHistoryService {
     /**
      * Create a chat history entry
      * Save chat history items of a Replica belonging to the logged in user.
-     * @param replicaUuid
+     * @param replicaUuid The replica unique identifier (UUID)
      * @param xApiVersion
+     * @param contentEncoding Content encoding for request body compression. Optional - when used, client is responsible for gzipping and sending binary data.
      * @param requestBody
      * @returns any Saves the chat history of the replica by the currently logged in user.
      * @throws ApiError
@@ -119,6 +120,7 @@ export class ChatHistoryService {
     public static postV1ReplicasChatHistory(
         replicaUuid: replicaUUID_parameter,
         xApiVersion: string = '2025-03-25',
+        contentEncoding?: 'gzip',
         requestBody?: {
             /**
              * Content of the message
@@ -128,9 +130,6 @@ export class ChatHistoryService {
              * The place where the conversation is happening, which informs where the message should be saved in the chat history.
              */
             source?: 'discord' | 'telegram' | 'embed' | 'web' | 'telegram_autopilot';
-            /**
-             * Discord information about the message
-             */
             discord_data?: {
                 /**
                  * Channel ID
@@ -180,6 +179,7 @@ export class ChatHistoryService {
             },
             headers: {
                 'X-API-Version': xApiVersion,
+                'Content-Encoding': contentEncoding,
             },
             body: requestBody,
             mediaType: 'application/json',
@@ -191,7 +191,7 @@ export class ChatHistoryService {
     /**
      * Get Web chat history
      * List web chat history items of a Replica belonging to the logged in user.
-     * @param replicaUuid
+     * @param replicaUuid The replica unique identifier (UUID)
      * @returns any List the chat history of the replica by the currently logged in user
      * @throws ApiError
      */
