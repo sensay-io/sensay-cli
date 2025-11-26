@@ -245,7 +245,8 @@ async function runKBTypeTest(
         model: 'claude-haiku-4-5',
         memoryMode: 'rag-search',
         systemMessage: `You are a test replica created for E2E testing. You have been trained on ${kbType} content.`,
-        tools: []
+        tools: [],
+        embeddingModel: 'qwen3-embedding-8b'
       }
     });
 
