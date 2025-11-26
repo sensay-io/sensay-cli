@@ -246,7 +246,6 @@ async function runKBTypeTest(
         memoryMode: 'rag-search',
         systemMessage: `You are a test replica created for E2E testing. You have been trained on ${kbType} content.`,
         tools: [],
-        embeddingModel: 'qwen3-embedding-8b'
       }
     });
 
