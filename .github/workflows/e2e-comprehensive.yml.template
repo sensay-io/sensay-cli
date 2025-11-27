@@ -16,6 +16,10 @@ on:
         description: 'Timeout in seconds'
         required: false
         default: '300'
+      embedding_model:
+        description: 'Embedding model to use (multilingual-e5-large or qwen3-embedding-8b)'
+        required: false
+        default: ''
 
 jobs:
   e2e-matrix:
@@ -50,7 +54,12 @@ jobs:
       env:
         SENSAY_API_KEY: ${{ secrets.SENSAY_API_KEY }}
       run: |
-        sensay e2e --non-interactive --kb-types ${{ matrix.kb-type }} --timeout ${{ github.event.inputs.timeout || '300' }}
+        EMBEDDING_MODEL_ARG="${{ github.event.inputs.embedding_model }}"
+        if [ -n "$EMBEDDING_MODEL_ARG" ]; then
+          sensay e2e --non-interactive --kb-types ${{ matrix.kb-type }} --timeout ${{ github.event.inputs.timeout || '300' }} --embedding-model "$EMBEDDING_MODEL_ARG"
+        else
+          sensay e2e --non-interactive --kb-types ${{ matrix.kb-type }} --timeout ${{ github.event.inputs.timeout || '300' }}
+        fi
       continue-on-error: true
       id: test
     

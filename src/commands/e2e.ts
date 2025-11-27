@@ -27,6 +27,7 @@ interface E2EOptions {
   simulateFailure?: boolean;
   kbFiles?: string;
   kbContentTypes?: string;
+  embeddingModel?: string;
 }
 
 interface KBTestScenario {
@@ -219,7 +220,8 @@ async function runKBTypeTest(
   timeoutMs: number,
   skipChatVerification: boolean,
   sentryConfig: { dsn?: string; environment?: string; sendErrors: boolean; sendPerformanceMetrics: boolean } = { sendErrors: false, sendPerformanceMetrics: false },
-  simulateFailure: boolean = false
+  simulateFailure: boolean = false,
+  embeddingModel?: string
 ): Promise<TestResult> {
   const startTime = Date.now();
   let trainingStartTime = 0;
@@ -235,18 +237,24 @@ async function runKBTypeTest(
     const replicaName = `E2E ${kbType}/${scenario.name} ${testRunId}`;
     console.log(chalk.gray(`[${kbType}/${scenario.name}] Creating replica: ${replicaName}`));
 
+    const llmConfig: any = {
+      model: 'claude-haiku-4-5',
+      memoryMode: 'rag-search',
+      systemMessage: `You are a test replica created for E2E testing. You have been trained on ${kbType} content.`,
+      tools: [],
+    };
+
+    if (embeddingModel) {
+      llmConfig.embeddingModel = embeddingModel as 'multilingual-e5-large' | 'qwen3-embedding-8b';
+    }
+
     const replicaResponse = await ReplicasService.postV1Replicas('2025-03-25', undefined, {
       name: replicaName,
       shortDescription: `Test replica for ${kbType} KB type`,
       greeting: `Hello! I'm a test replica trained on ${kbType} content.`,
       ownerID: userId,
       slug: `e2e-test-${kbType}-${scenario.name}-${testRunId}`,
-      llm: {
-        model: 'claude-haiku-4-5',
-        memoryMode: 'rag-search',
-        systemMessage: `You are a test replica created for E2E testing. You have been trained on ${kbType} content.`,
-        tools: [],
-      }
+      llm: llmConfig
     });
 
     const replicaUuid = replicaResponse.uuid!;
@@ -1000,7 +1008,7 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
 
         // Create all test tasks - they start executing immediately
         const testTasks = allTests.map(({ kbType, scenario }) =>
-          runKBTypeTest(kbType, scenario, userId, testRunId, timeoutMs, options.skipChatVerification || false, sentryConfig, options.simulateFailure || false)
+          runKBTypeTest(kbType, scenario, userId, testRunId, timeoutMs, options.skipChatVerification || false, sentryConfig, options.simulateFailure || false, options.embeddingModel)
         );
 
         // Wait for all tests to complete
@@ -1030,7 +1038,7 @@ export async function e2eCommand(options: E2EOptions = {}): Promise<void> {
         // Sequential mode
         for (const { kbType, scenario } of allTests) {
           try {
-            const result = await runKBTypeTest(kbType, scenario, userId, testRunId, timeoutMs, options.skipChatVerification || false, sentryConfig, options.simulateFailure || false);
+            const result = await runKBTypeTest(kbType, scenario, userId, testRunId, timeoutMs, options.skipChatVerification || false, sentryConfig, options.simulateFailure || false, options.embeddingModel);
             results.push(result);
           } catch (error: any) {
             results.push({
@@ -1113,6 +1121,7 @@ export function setupE2ECommand(program: Command): void {
     .option('--sentry-send-performance-metrics', 'send performance metrics to Sentry for passing tests')
     .option('--simulate-failure', 'make all tests fail to test Sentry integration')
     .option('--pre-cleanup', 'delete all users in the organization before running tests')
+    .option('--embedding-model <model>', 'embedding model to use (multilingual-e5-large or qwen3-embedding-8b)')
     .action((options) => {
       const globalOptions = program.opts();
       return e2eCommand({ ...options, ...globalOptions });

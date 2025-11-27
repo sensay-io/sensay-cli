@@ -5,6 +5,11 @@ on:
     # Run at 2:00 AM UTC every day
     - cron: '0 2 * * *'
   workflow_dispatch: # Allow manual triggering
+    inputs:
+      embedding_model:
+        description: 'Embedding model to use (multilingual-e5-large or qwen3-embedding-8b)'
+        required: false
+        default: ''
 
 jobs:
   e2e-tests:
@@ -28,7 +33,12 @@ jobs:
         SENSAY_API_KEY: ${{ secrets.SENSAY_API_KEY }}
       run: |
         # Run e2e tests with all KB types
-        sensay e2e --non-interactive
+        EMBEDDING_MODEL_ARG="${{ github.event.inputs.embedding_model }}"
+        if [ -n "$EMBEDDING_MODEL_ARG" ]; then
+          sensay e2e --non-interactive --embedding-model "$EMBEDDING_MODEL_ARG"
+        else
+          sensay e2e --non-interactive
+        fi
     
     - name: Notify on failure
       if: failure()
